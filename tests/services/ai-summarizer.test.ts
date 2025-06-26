@@ -33,12 +33,9 @@ describe('AISummarizer', () => {
 
       const result = await aiSummarizer.summarizeArticle(request);
 
-      expect(mockGenerateContent).toHaveBeenCalledWith([{
-        role: 'user',
-        parts: [{
-          text: expect.stringContaining('以下の英語記事を140字以内の日本語で要約してください')
-        }]
-      }]);
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.stringContaining('以下の英語記事を140字以内の日本語で要約してください')
+      );
 
       expect(result.summary).toBe('AWSがLambdaの新機能を発表。サーバーレス関数のパフォーマンス向上とコールドスタート時間短縮を実現。');
     });

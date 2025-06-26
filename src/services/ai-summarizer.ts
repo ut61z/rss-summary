@@ -24,10 +24,7 @@ export class AISummarizer {
       try {
         const prompt = this.buildPrompt(request);
         
-        const result = await this.model.generateContent([{
-          role: 'user',
-          parts: [{ text: prompt }]
-        }]);
+        const result = await this.model.generateContent(prompt);
 
         const summary = result.response.text().trim();
         
