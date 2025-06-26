@@ -1,22 +1,30 @@
-name = "rss-summary"
+name = "rss-summary-dev"
 main = "src/index.ts"
 compatibility_date = "2024-09-25"
 node_compat = true
 
-[env.production]
-name = "rss-summary"
-
-[env.development]
-name = "rss-summary-dev"
-
+# 開発環境（デフォルト）
 [[d1_databases]]
 binding = "DB"
-database_name = "rss-summary-db"
-database_id = ""
+database_name = "rss-summary-dev-db"
+database_id = "bc59f74a-24a6-4600-9f50-34c387892898"
 migrations_dir = "migrations"
-
-[triggers]
-crons = ["30 6 * * *"]
 
 [vars]
 ENVIRONMENT = "development"
+
+# 本番環境
+[env.production]
+name = "rss-summary"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "rss-summary-prod-db"
+database_id = ""
+migrations_dir = "migrations"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[env.production.triggers]
+crons = ["30 6 * * *"]

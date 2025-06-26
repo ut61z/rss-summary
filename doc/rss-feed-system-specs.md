@@ -142,7 +142,7 @@ ENVIRONMENT=production # or development
 ## External API Integration
 
 ### Gemini API
-- Model: gemini-1.5-flash
+- Model: gemini-2.0-flash
 - Rate Limits: 15 requests/minute, 1500 requests/day
 - Prompt Template:
 ```
