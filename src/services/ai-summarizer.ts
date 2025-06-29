@@ -58,7 +58,11 @@ export class AISummarizer {
   buildPrompt(request: SummaryRequest): string {
     const content = request.content || '(内容なし)';
     
-    return `以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を記述してください。ただし絶対に250字を超えないようにしてください。
+    return `
+    以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください。
+    絶対に250字を超えないようにしてください。
+    強調表現(**)なども不要、句読点は , . を使ってください。
+    「詳細は〇〇」という文言も不要です。
 
 タイトル: ${request.title}
 内容: ${content}
