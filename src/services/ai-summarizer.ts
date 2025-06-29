@@ -58,12 +58,12 @@ export class AISummarizer {
   buildPrompt(request: SummaryRequest): string {
     const content = request.content || '(内容なし)';
     
-    return `以下の英語記事を300字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
+    return `以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を記述してください。ただし絶対に250字を超えないようにしてください。
 
 タイトル: ${request.title}
 内容: ${content}
 
-要約:`;
+概要と注目すべき点:`;
   }
 
   validateAndTruncate(summary: string): string {
