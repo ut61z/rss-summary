@@ -34,7 +34,7 @@ describe('AISummarizer', () => {
       const result = await aiSummarizer.summarizeArticle(request);
 
       expect(mockGenerateContent).toHaveBeenCalledWith(
-        expect.stringContaining('以下の英語記事を300字以内の日本語で要約してください')
+        expect.stringContaining('以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください')
       );
 
       expect(result.summary).toBe('AWSがLambdaの新機能を発表。サーバーレス関数のパフォーマンス向上とコールドスタート時間短縮を実現。');
@@ -59,13 +59,13 @@ describe('AISummarizer', () => {
       expect(result.summary).toBe('テスト記事のタイトルのみの要約です。');
     });
 
-    it('should truncate long summaries to 300 characters', async () => {
+    it('should truncate long summaries to 400 characters', async () => {
       const request: SummaryRequest = {
         title: 'Long Article',
         content: 'This is a very long article with lots of content.'
       };
 
-      const longSummary = 'あ'.repeat(350); // 350文字の要約
+      const longSummary = 'あ'.repeat(450); // 450文字の要約
       const mockResponse = {
         response: {
           text: () => longSummary
@@ -76,7 +76,7 @@ describe('AISummarizer', () => {
 
       const result = await aiSummarizer.summarizeArticle(request);
 
-      expect(result.summary.length).toBe(300);
+      expect(result.summary.length).toBe(400);
       expect(result.summary).toMatch(/…$/); // Should end with ellipsis
     });
 
@@ -152,10 +152,10 @@ describe('AISummarizer', () => {
 
       const prompt = aiSummarizer.buildPrompt(request);
 
-      expect(prompt).toContain('以下の英語記事を300字以内の日本語で要約してください');
+      expect(prompt).toContain('以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください');
       expect(prompt).toContain('タイトル: Test Title');
       expect(prompt).toContain('内容: Test content here');
-      expect(prompt).toContain('要約:');
+      expect(prompt).toContain('概要と注目すべき点:');
     });
 
     it('should handle missing content', () => {
@@ -172,16 +172,16 @@ describe('AISummarizer', () => {
   });
 
   describe('validateAndTruncate', () => {
-    it('should return summary as-is if under 300 characters', () => {
+    it('should return summary as-is if under 400 characters', () => {
       const shortSummary = '短い要約です。';
       const result = aiSummarizer.validateAndTruncate(shortSummary);
       expect(result).toBe(shortSummary);
     });
 
-    it('should truncate and add ellipsis if over 300 characters', () => {
-      const longSummary = 'あ'.repeat(350);
+    it('should truncate and add ellipsis if over 400 characters', () => {
+      const longSummary = 'あ'.repeat(450);
       const result = aiSummarizer.validateAndTruncate(longSummary);
-      expect(result.length).toBe(300);
+      expect(result.length).toBe(400);
       expect(result).toMatch(/…$/);
     });
 

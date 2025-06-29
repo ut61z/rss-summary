@@ -78,12 +78,12 @@ export class AISummarizer {
     // Remove leading/trailing whitespace and newlines
     const cleaned = summary.trim().replace(/\n+/g, ' ');
     
-    if (cleaned.length <= 300) {
+    if (cleaned.length <= 400) {
       return cleaned;
     }
 
-    // Truncate to 299 characters and add ellipsis
-    return cleaned.substring(0, 299) + '…';
+    // Truncate to 399 characters and add ellipsis
+    return cleaned.substring(0, 399) + '…';
   }
 
   async testConnection(): Promise<boolean> {
