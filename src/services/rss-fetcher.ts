@@ -109,7 +109,7 @@ export class RSSFetcher {
         return {
           title: entry.title || '',
           url: entry.link?.['@_href'] || entry.link || '',
-          published_date: this.parseRSSDate(entry.published),
+          published_date: this.parseRSSDate(entry.updated || entry.published),
           content
         };
       });

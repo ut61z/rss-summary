@@ -10,7 +10,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
   - AWS新機能情報: https://aws.amazon.com/about-aws/whats-new/recent/feed/
   - Martin Fowlerブログ: https://martinfowler.com/feed.atom
 - 自動更新：毎日朝6:30（JST）
-- AI要約：Gemini APIで140字以内の日本語要約生成
+- AI要約：Gemini APIで300字以内の日本語要約生成
 - 表示：カード形式、時系列、20件ずつページネーション
 
 ### Non-Functional Requirements
@@ -146,7 +146,7 @@ ENVIRONMENT=production # or development
 - Rate Limits: 15 requests/minute, 1500 requests/day
 - Prompt Template:
 ```
-以下の英語記事を140字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
+以下の英語記事を300字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
 
 タイトル: {title}
 内容: {content}

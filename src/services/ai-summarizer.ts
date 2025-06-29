@@ -58,7 +58,7 @@ export class AISummarizer {
   buildPrompt(request: SummaryRequest): string {
     const content = request.content || '(内容なし)';
     
-    return `以下の英語記事を140字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
+    return `以下の英語記事を300字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
 
 タイトル: ${request.title}
 内容: ${content}
@@ -74,12 +74,12 @@ export class AISummarizer {
     // Remove leading/trailing whitespace and newlines
     const cleaned = summary.trim().replace(/\n+/g, ' ');
     
-    if (cleaned.length <= 140) {
+    if (cleaned.length <= 300) {
       return cleaned;
     }
 
-    // Truncate to 139 characters and add ellipsis
-    return cleaned.substring(0, 139) + '…';
+    // Truncate to 299 characters and add ellipsis
+    return cleaned.substring(0, 299) + '…';
   }
 
   async testConnection(): Promise<boolean> {

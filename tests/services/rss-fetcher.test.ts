@@ -121,6 +121,40 @@ describe('RSSFetcher', () => {
 
       await expect(rssFetcher.fetchMartinFowlerFeed()).rejects.toThrow('Failed to parse Martin Fowler Atom feed');
     });
+
+    it('should parse Martin Fowler Atom feed with updated field', async () => {
+      const mockAtomXML = `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<title>Martin Fowler</title>
+<entry>
+<title>LLMs bring new nature of abstraction</title>
+<link href="https://martinfowler.com/articles/2025-nature-abstraction.html"/>
+<updated>2025-06-24T10:02:00-04:00</updated>
+<id>tag:martinfowler.com,2025-06-24:LLMs-bring-new-nature-of-abstraction</id>
+<content type="html">
+&lt;p&gt;Like most loudmouths in this field, I&amp;#x2019;ve been paying a lot of attention
+      to the role that generative AI systems may play in software development.&lt;/p&gt;
+
+&lt;p&gt;&lt;a class = 'more' href = 'https://martinfowler.com/articles/2025-nature-abstraction.html'&gt;more窶ｦ&lt;/a&gt;&lt;/p&gt;
+</content>
+</entry>
+</feed>`;
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(mockAtomXML)
+      });
+
+      const result = await rssFetcher.fetchMartinFowlerFeed();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        title: 'LLMs bring new nature of abstraction',
+        url: 'https://martinfowler.com/articles/2025-nature-abstraction.html',
+        published_date: '2025-06-24T14:02:00.000Z',
+        content: expect.stringContaining('Like most loudmouths in this field')
+      });
+    });
   });
 
   describe('fetchAllFeeds', () => {
