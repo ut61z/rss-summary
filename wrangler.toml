@@ -12,7 +12,6 @@ migrations_dir = "migrations"
 
 [vars]
 ENVIRONMENT = "development"
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1389251072148770866/dImIVp_IEDP4dj6PmR5hddPq2dMRuJiqENPMn0iN3P3_le6pL1dJk5k7HUVQUJc9inh-"
 
 # 本番環境
 [env.production]
@@ -26,7 +25,6 @@ migrations_dir = "migrations"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1389251072148770866/dImIVp_IEDP4dj6PmR5hddPq2dMRuJiqENPMn0iN3P3_le6pL1dJk5k7HUVQUJc9inh-"
 
 [env.production.triggers]
 crons = ["30 6 * * *"]
