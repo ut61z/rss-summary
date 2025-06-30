@@ -36,6 +36,7 @@ export interface PaginationResult<T> {
 export interface Environment {
   DB: D1Database;
   GEMINI_API_KEY: string;
+  DISCORD_WEBHOOK_URL?: string;
   ENVIRONMENT: string;
 }
 

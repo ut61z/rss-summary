@@ -7,10 +7,10 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 
 ### Functional Requirements
 - RSS源：
-  - AWS新機能情報: https://aws.amazon.com/about-aws/whats-new/recent/feed/
+  - AWS新機能情報: https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/
   - Martin Fowlerブログ: https://martinfowler.com/feed.atom
 - 自動更新：毎日朝6:30（JST）
-- AI要約：Gemini APIで300字以内の日本語要約生成
+- AI要約：Gemini APIで140字以内の日本語要約生成
 - 表示：カード形式、時系列、20件ずつページネーション
 
 ### Non-Functional Requirements
@@ -32,8 +32,9 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 1. **RSS Fetcher**: RSSフィード取得・パース
 2. **AI Summarizer**: Gemini API経由での要約生成
 3. **Database Layer**: D1データベース操作
-4. **Web Server**: HTMLページ配信・API提供
-5. **Scheduler**: Cron Job実行
+4. **Discord Notifier**: Webhook経由での通知送信
+5. **Web Server**: HTMLページ配信・API提供
+6. **Scheduler**: Cron Job実行
 
 ### Data Flow
 ```
@@ -46,6 +47,8 @@ Article Parser
 Gemini API (Summarization)
   ↓
 D1 Database Storage
+  ↓
+Discord Notification (per article)
   ↓
 Web Interface Display
 ```
@@ -96,6 +99,7 @@ CREATE INDEX idx_level ON logs(level);
 │   ├── services/
 │   │   ├── rss-fetcher.ts    # RSS feed fetching & parsing
 │   │   ├── ai-summarizer.ts  # Gemini API integration
+│   │   ├── discord-notifier.ts # Discord webhook notifications
 │   │   ├── database.ts       # D1 database operations
 │   │   └── logger.ts         # Logging utility
 │   ├── types/
@@ -135,18 +139,42 @@ CREATE INDEX idx_level ON logs(level);
 ```bash
 # Cloudflare Workers環境変数
 GEMINI_API_KEY=your_gemini_api_key
+DISCORD_WEBHOOK_URL=your_discord_webhook_url
 DB=your_d1_database_binding
 ENVIRONMENT=production # or development
 ```
 
-## External API Integration
+## Discord Integration
 
-### Gemini API
-- Model: gemini-2.0-flash
+### Discord Webhook Format
+- 記事ごとに個別送信
+- シンプルテキスト形式
+- フィード別色分け（AWS: 青、Martin Fowler: 緑）
+
+### Message Format
+```typescript
+interface DiscordMessage {
+  embeds: [{
+    title: string;           // 記事タイトル
+    description: string;     // 140字要約
+    url: string;            // 元記事URL
+    color: number;          // フィード別色（AWS: 0x3498db, Martin Fowler: 0x2ecc71）
+    footer: {
+      text: string;         // フィード名
+    };
+    timestamp: string;      // 投稿日時
+  }];
+}
+```
+
+### Error Handling
+- Discord送信失敗: ログ記録、処理継続
+- Webhook URL無効: ログ記録、Discord送信スキップ
+- Model: gemini-1.5-flash
 - Rate Limits: 15 requests/minute, 1500 requests/day
 - Prompt Template:
 ```
-以下の英語記事を300字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
+以下の英語記事を140字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
 
 タイトル: {title}
 内容: {content}
@@ -157,6 +185,7 @@ ENVIRONMENT=production # or development
 ## Error Handling Strategy
 - RSS取得失敗: ログ記録、次回実行時に再試行
 - AI要約失敗: ログ記録、元記事をそのまま保存
+- Discord送信失敗: ログ記録、処理継続
 - DB接続失敗: ログ記録、アプリケーション継続
 - 全エラーは構造化ログとして記録
 
