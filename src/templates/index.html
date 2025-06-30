@@ -100,6 +100,7 @@
 
         .articles-grid {
             display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -246,6 +247,14 @@
             font-size: 1.5rem;
         }
 
+        /* タブレット用（2列） */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .articles-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* スマホ用（1列） */
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -258,6 +267,10 @@
             .filter-group {
                 flex-direction: column;
                 align-items: stretch;
+            }
+
+            .articles-grid {
+                grid-template-columns: 1fr;
             }
 
             .article-header {

@@ -8,6 +8,7 @@ describe('CronHandler', () => {
   let mockDatabase: any;
   let mockRSSFetcher: any;
   let mockAISummarizer: any;
+  let mockDiscordNotifier: any;
 
   beforeEach(() => {
     mockLogger = {
@@ -30,11 +31,17 @@ describe('CronHandler', () => {
       summarizeArticle: mock()
     };
 
+    mockDiscordNotifier = {
+      notifyMultipleArticles: mock(),
+      notifyNewArticle: mock()
+    };
+
     cronHandler = new CronHandler(
       mockLogger,
       mockDatabase,
       mockRSSFetcher,
-      mockAISummarizer
+      mockAISummarizer,
+      mockDiscordNotifier
     );
   });
 
@@ -238,7 +245,8 @@ describe('CronHandler', () => {
 
       const result = await cronHandler.processArticle(article, 'aws');
 
-      expect(result).toBe(true);
+      expect(result.isNew).toBe(true);
+      expect(result.savedArticle).toBe(1);
       expect(mockDatabase.saveArticle).toHaveBeenCalledWith({
         title: 'Test Article',
         url: 'https://example.com/test',
@@ -262,7 +270,8 @@ describe('CronHandler', () => {
 
       const result = await cronHandler.processArticle(article, 'aws');
 
-      expect(result).toBe(false);
+      expect(result.isNew).toBe(false);
+      expect(result.savedArticle).toBeUndefined();
       expect(mockDatabase.saveArticle).not.toHaveBeenCalled();
     });
   });

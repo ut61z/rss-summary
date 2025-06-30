@@ -20,7 +20,7 @@ name = "rss-summary"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "rss-summary-prod-db"
-database_id = ""
+database_id = "aa1bfa7d-0045-4848-93ec-78cd099c951b"
 migrations_dir = "migrations"
 
 [env.production.vars]

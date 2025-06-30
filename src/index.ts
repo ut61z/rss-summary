@@ -2,6 +2,7 @@ import { Logger } from './services/logger';
 import { DatabaseService } from './services/database';
 import { RSSFetcher } from './services/rss-fetcher';
 import { AISummarizer } from './services/ai-summarizer';
+import { DiscordNotifier } from './services/discord-notifier';
 import { CronHandler } from './handlers/cron';
 import { ApiHandler } from './handlers/api';
 import { WebHandler } from './handlers/web';
@@ -14,6 +15,7 @@ export default {
     const database = new DatabaseService(env.DB);
     const rssFetcher = new RSSFetcher();
     const aiSummarizer = new AISummarizer(env.GEMINI_API_KEY);
+    const discordNotifier = new DiscordNotifier(env, logger);
     
     // Initialize handlers
     const apiHandler = new ApiHandler(database, logger);
@@ -36,12 +38,23 @@ export default {
         }
         
         if (pathname === '/api/cron/update-feeds' && method === 'POST') {
-          const cronHandler = new CronHandler(logger, database, rssFetcher, aiSummarizer);
+          const cronHandler = new CronHandler(logger, database, rssFetcher, aiSummarizer, discordNotifier);
           return cronHandler.handleManualTrigger();
         }
 
         if (pathname === '/api/health' && method === 'GET') {
           return apiHandler.handleHealthCheck();
+        }
+
+        if (pathname === '/api/discord/test' && method === 'POST') {
+          const result = await discordNotifier.testNotification();
+          return new Response(JSON.stringify({
+            success: result,
+            message: result ? 'Discord test notification sent successfully' : 'Discord test notification failed'
+          }), {
+            status: result ? 200 : 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
         }
 
         // API route not found
@@ -91,9 +104,10 @@ export default {
     const database = new DatabaseService(env.DB);
     const rssFetcher = new RSSFetcher();
     const aiSummarizer = new AISummarizer(env.GEMINI_API_KEY);
+    const discordNotifier = new DiscordNotifier(env, logger);
     
     // Initialize cron handler
-    const cronHandler = new CronHandler(logger, database, rssFetcher, aiSummarizer);
+    const cronHandler = new CronHandler(logger, database, rssFetcher, aiSummarizer, discordNotifier);
 
     try {
       await logger.info('Scheduled RSS update started', {

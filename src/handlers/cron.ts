@@ -2,6 +2,7 @@ import type { Logger } from '../services/logger';
 import type { DatabaseService } from '../services/database';
 import type { RSSFetcher } from '../services/rss-fetcher';
 import type { AISummarizer } from '../services/ai-summarizer';
+import type { DiscordNotifier } from '../services/discord-notifier';
 import type { RSSFeedItem } from '../types';
 
 export class CronHandler {
@@ -9,7 +10,8 @@ export class CronHandler {
     private logger: Logger,
     private database: DatabaseService,
     private rssFetcher: RSSFetcher,
-    private aiSummarizer: AISummarizer
+    private aiSummarizer: AISummarizer,
+    private discordNotifier: DiscordNotifier
   ) {}
 
   async handleScheduledEvent(): Promise<void> {
@@ -21,12 +23,16 @@ export class CronHandler {
       let processedCount = 0;
       let newArticlesCount = 0;
       let errorCount = 0;
+      const newArticles: any[] = [];
 
       // Process AWS articles
       for (const article of feeds.aws) {
         try {
-          const isNew = await this.processArticle(article, 'aws');
-          if (isNew) newArticlesCount++;
+          const result = await this.processArticle(article, 'aws');
+          if (result.isNew && result.savedArticle) {
+            newArticlesCount++;
+            newArticles.push(result.savedArticle);
+          }
           processedCount++;
         } catch (error) {
           errorCount++;
@@ -41,8 +47,11 @@ export class CronHandler {
       // Process Martin Fowler articles
       for (const article of feeds.martinfowler) {
         try {
-          const isNew = await this.processArticle(article, 'martinfowler');
-          if (isNew) newArticlesCount++;
+          const result = await this.processArticle(article, 'martinfowler');
+          if (result.isNew && result.savedArticle) {
+            newArticlesCount++;
+            newArticles.push(result.savedArticle);
+          }
           processedCount++;
         } catch (error) {
           errorCount++;
@@ -50,6 +59,22 @@ export class CronHandler {
           await this.logger.error('Failed to process article', {
             url: article.url,
             error: errorMessage
+          });
+        }
+      }
+
+      // Send Discord notifications for new articles
+      if (newArticles.length > 0) {
+        try {
+          await this.discordNotifier.notifyMultipleArticles(newArticles);
+          await this.logger.info('Discord notifications sent', {
+            notificationCount: newArticles.length
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          await this.logger.error('Failed to send Discord notifications', {
+            error: errorMessage,
+            articleCount: newArticles.length
           });
         }
       }
@@ -71,11 +96,11 @@ export class CronHandler {
     }
   }
 
-  async processArticle(article: RSSFeedItem, source: 'aws' | 'martinfowler'): Promise<boolean> {
+  async processArticle(article: RSSFeedItem, source: 'aws' | 'martinfowler'): Promise<{isNew: boolean, savedArticle?: any}> {
     // Check if article already exists
     const existingArticle = await this.database.getArticleByUrl(article.url);
     if (existingArticle) {
-      return false; // Article already exists, skip
+      return { isNew: false }; // Article already exists, skip
     }
 
     let summary: string | undefined;
@@ -108,8 +133,8 @@ export class CronHandler {
       summary_ja: summary
     };
 
-    await this.database.saveArticle(articleData);
-    return true; // New article was saved
+    const savedArticle = await this.database.saveArticle(articleData);
+    return { isNew: true, savedArticle }; // New article was saved
   }
 
   async handleManualTrigger(): Promise<Response> {
