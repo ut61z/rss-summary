@@ -134,7 +134,7 @@ export class DiscordNotifier {
       url: 'https://example.com/test',
       published_date: new Date().toISOString(),
       feed_source: 'aws',
-      original_content: null,
+      original_content: '',
       summary_ja: 'これはDiscord連携のテスト通知です。正常に動作していることを確認してください。',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

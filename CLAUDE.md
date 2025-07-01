@@ -14,6 +14,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - レスポンシブデザインのSPAでカード形式表示（ソースフィルタリング・ページネーション付き）
 - Cloudflare WorkersとD1データベースで動作
 - 手動RSS更新機能付きWebインターフェース
+- Discord Webhookによる新記事・エラー通知機能
 
 ## 技術スタック
 
@@ -23,8 +24,8 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - **XMLパーサー**: fast-xml-parser (RSS/Atom対応)
 - **フロントエンド**: レスポンシブSPA (HTML/CSS/JavaScript, モバイル対応)
 - **テストフレームワーク**: Bun built-in test runner + comprehensive test suite
-- **開発ツール**: ESLint, mise runtime manager
-- **デプロイ**: Cloudflare Workers (development/production環境分離)
+- **開発ツール**: ESLint, mise runtime manager, デバッグ用スクリプト
+- **デプロイ**: Cloudflare Workers (production/staging/development環境分離)
 - **スケジューリング**: Cloudflare Cron Triggers (毎日6:30 AM)
 
 ## アーキテクチャ
@@ -36,6 +37,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - `ai-summarizer.ts`: Gemini API連携による日本語要約生成
 - `database.ts`: D1データベース操作（articles、logsテーブル）
 - `logger.ts`: 構造化ログ出力ユーティリティ
+- `discord-notifier.ts`: Discord Webhookによる新記事・エラー通知処理
 
 ### ハンドラー層 (`src/handlers/`)
 - `web.ts`: HTMLページレンダリング・Web インターフェース
@@ -52,7 +54,9 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - `bun install` - 依存関係インストール
 - `bun run dev` - ローカル開発サーバー起動
 - `bun test` - テストスイート実行（TDD開発用）
-- `bun run deploy` - Cloudflareへデプロイ
+- `bun run deploy` - 本番環境へデプロイ
+- `wrangler deploy --env staging` - ステージング環境へデプロイ
+- `bun run debug:summary` - 特定記事の要約をデバッグ実行
 - `bun run lint` - ESLintによるコードチェック
 
 ### データベース管理
@@ -66,8 +70,9 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 
 必要な環境変数：
 - `GEMINI_API_KEY`: Google Gemini API キー（要約生成用）
+- `DISCORD_WEBHOOK_URL`: Discord Webhook URL（通知用、オプション）
 - `DB`: D1データベースバインディング
-- `ENVIRONMENT`: production または development
+- `ENVIRONMENT`: production、staging、または development
 
 ## 主要ビジネスロジック
 
@@ -77,6 +82,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 3. 記事をパースし、URL一意性で重複チェック
 4. Gemini APIで300文字以内の日本語要約生成
 5. 要約付き記事をD1データベースに保存
+6. 新記事についてDiscord Webhookで通知送信（設定時）
 
 ### APIエンドポイント
 - `GET /`: メインHTMLページ（レスポンシブSPA、ページネーション・ソースフィルタリング付き）
@@ -91,6 +97,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - **データベース失敗**: エラーログ記録しアプリケーション継続
 - **重複記事**: URL一意性チェックでスキップ（既存データは更新しない）
 - **レート制限**: Gemini APIは15req/min制限を考慮した順次処理
+- **Discord通知失敗**: ログ記録しアプリケーション継続（通知失敗は致命的エラーではない）
 - **全エラー**: 構造化ログとしてD1データベースに保存
 
 ## データベーススキーマ
