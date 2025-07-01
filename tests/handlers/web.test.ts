@@ -1,12 +1,22 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { WebHandler } from '../../src/handlers/web.ts';
+import { describe, it, expect, beforeEach, mock, type Mock } from 'bun:test';
+import { WebHandler } from '../../src/handlers/web';
 import type { DatabaseService } from '../../src/services/database';
 import type { Logger } from '../../src/services/logger';
 
 describe('WebHandler', () => {
   let webHandler: WebHandler;
-  let mockDatabase: DatabaseService;
-  let mockLogger: Logger;
+  let mockDatabase: {
+    getArticles: Mock<() => Promise<any>>;
+    saveArticle: Mock<() => Promise<any>>;
+    getArticleByUrl: Mock<() => Promise<any>>;
+    updateArticleSummary: Mock<() => Promise<any>>;
+  };
+  let mockLogger: {
+    info: Mock<(message: string, details?: any) => Promise<void>>;
+    error: Mock<(message: string, details?: any) => Promise<void>>;
+    warn: Mock<(message: string, details?: any) => Promise<void>>;
+    getLogs: Mock<() => Promise<any>>;
+  };
 
   beforeEach(() => {
     // DatabaseServiceのモック
@@ -15,7 +25,7 @@ describe('WebHandler', () => {
       saveArticle: mock(),
       getArticleByUrl: mock(),
       updateArticleSummary: mock()
-    } as any;
+    };
 
     // Loggerのモック
     mockLogger = {
@@ -23,9 +33,9 @@ describe('WebHandler', () => {
       error: mock(),
       warn: mock(),
       getLogs: mock()
-    } as any;
+    };
 
-    webHandler = new WebHandler(mockDatabase, mockLogger);
+    webHandler = new WebHandler(mockDatabase as unknown as DatabaseService, mockLogger as unknown as Logger);
   });
 
   describe('handleHomeRequest', () => {

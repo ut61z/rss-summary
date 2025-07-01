@@ -5,7 +5,7 @@ import type { Article } from '../../src/types';
 
 // fetch関数をモック
 const mockFetch = mock();
-global.fetch = mockFetch;
+(global as any).fetch = mockFetch;
 
 describe('DiscordNotifier', () => {
   let discordNotifier: DiscordNotifier;
@@ -104,9 +104,9 @@ describe('DiscordNotifier', () => {
     });
 
     it('should format webhook payload correctly for Martin Fowler article', async () => {
-      const martinFowlerArticle = { 
+      const martinFowlerArticle: Article = { 
         ...testArticle, 
-        feed_source: 'martinfowler' 
+        feed_source: 'martinfowler' as const
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -131,9 +131,9 @@ describe('DiscordNotifier', () => {
     });
 
     it('should handle article without summary', async () => {
-      const articleWithoutSummary = { 
+      const articleWithoutSummary: Article = { 
         ...testArticle, 
-        summary_ja: null 
+        summary_ja: undefined 
       };
 
       mockFetch.mockResolvedValueOnce({

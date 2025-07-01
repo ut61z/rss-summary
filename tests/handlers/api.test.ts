@@ -1,13 +1,23 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, mock, type Mock } from 'bun:test';
 import { ApiHandler } from '../../src/handlers/api';
 import type { DatabaseService } from '../../src/services/database';
 import type { Logger } from '../../src/services/logger';
-import type { Article, ArticleFilter } from '../../src/types';
+import type { Article, ArticleFilter, PaginationResult } from '../../src/types';
 
 describe('ApiHandler', () => {
   let apiHandler: ApiHandler;
-  let mockDatabase: DatabaseService;
-  let mockLogger: Logger;
+  let mockDatabase: {
+    getArticles: Mock<(filter?: ArticleFilter) => Promise<PaginationResult<Article>>>;
+    saveArticle: Mock<(article: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => Promise<Article>>;
+    getArticleByUrl: Mock<(url: string) => Promise<Article | null>>;
+    updateArticleSummary: Mock<(id: number, summary: string) => Promise<void>>;
+  };
+  let mockLogger: {
+    info: Mock<(message: string, details?: any) => Promise<void>>;
+    error: Mock<(message: string, details?: any) => Promise<void>>;
+    warn: Mock<(message: string, details?: any) => Promise<void>>;
+    getLogs: Mock<(filter?: any) => Promise<any>>;
+  };
 
   beforeEach(() => {
     // DatabaseServiceのモック
@@ -16,7 +26,7 @@ describe('ApiHandler', () => {
       saveArticle: mock(),
       getArticleByUrl: mock(),
       updateArticleSummary: mock()
-    } as any;
+    };
 
     // Loggerのモック
     mockLogger = {
@@ -24,9 +34,9 @@ describe('ApiHandler', () => {
       error: mock(),
       warn: mock(),
       getLogs: mock()
-    } as any;
+    };
 
-    apiHandler = new ApiHandler(mockDatabase, mockLogger);
+    apiHandler = new ApiHandler(mockDatabase as unknown as DatabaseService, mockLogger as unknown as Logger);
   });
 
   describe('handleArticlesRequest', () => {
@@ -57,11 +67,11 @@ describe('ApiHandler', () => {
 
     it('should handle default parameters correctly', async () => {
       const mockResult = {
-        articles: mockArticles,
+        data: mockArticles,
         total: 2,
         page: 1,
         limit: 20,
-        hasMore: false
+        totalPages: 1
       };
 
       mockDatabase.getArticles.mockResolvedValueOnce(mockResult);
@@ -73,7 +83,7 @@ describe('ApiHandler', () => {
       expect(response.headers.get('Content-Type')).toBe('application/json');
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
-      const responseData = await response.json();
+      const responseData = await response.json() as typeof mockResult;
       expect(responseData).toEqual(mockResult);
 
       expect(mockDatabase.getArticles).toHaveBeenCalledWith({
@@ -95,11 +105,11 @@ describe('ApiHandler', () => {
 
     it('should handle custom query parameters', async () => {
       const mockResult = {
-        articles: [mockArticles[0]],
+        data: [mockArticles[0]],
         total: 1,
         page: 2,
         limit: 10,
-        hasMore: false
+        totalPages: 1
       };
 
       mockDatabase.getArticles.mockResolvedValueOnce(mockResult);
@@ -109,7 +119,7 @@ describe('ApiHandler', () => {
 
       expect(response.status).toBe(200);
 
-      const responseData = await response.json();
+      const responseData = await response.json() as typeof mockResult;
       expect(responseData).toEqual(mockResult);
 
       expect(mockDatabase.getArticles).toHaveBeenCalledWith({
@@ -121,11 +131,11 @@ describe('ApiHandler', () => {
 
     it('should validate and correct invalid parameters', async () => {
       const mockResult = {
-        articles: mockArticles,
+        data: mockArticles,
         total: 2,
         page: 1,
         limit: 20,
-        hasMore: false
+        totalPages: 1
       };
 
       mockDatabase.getArticles.mockResolvedValueOnce(mockResult);
@@ -144,11 +154,11 @@ describe('ApiHandler', () => {
 
     it('should handle source filter correctly', async () => {
       const mockResult = {
-        articles: [mockArticles[1]],
+        data: [mockArticles[1]],
         total: 1,
         page: 1,
         limit: 20,
-        hasMore: false
+        totalPages: 1
       };
 
       mockDatabase.getArticles.mockResolvedValueOnce(mockResult);
@@ -174,7 +184,7 @@ describe('ApiHandler', () => {
       expect(response.status).toBe(500);
       expect(response.headers.get('Content-Type')).toBe('application/json');
 
-      const responseData = await response.json();
+      const responseData = await response.json() as { error: string; message: string };
       expect(responseData).toEqual({
         error: 'Internal server error',
         message: 'Database connection failed'
@@ -201,7 +211,7 @@ describe('ApiHandler', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('application/json');
 
-      const responseData = await response.json();
+      const responseData = await response.json() as { success: boolean; message: string };
       expect(responseData).toEqual({
         success: true,
         message: 'Cron job triggered successfully'
@@ -226,7 +236,7 @@ describe('ApiHandler', () => {
       expect(response.headers.get('Content-Type')).toBe('application/json');
       expect(response.headers.get('Allow')).toBe('POST');
 
-      const responseData = await response.json();
+      const responseData = await response.json() as { error: string };
       expect(responseData).toEqual({
         error: 'Method not allowed'
       });
@@ -245,7 +255,7 @@ describe('ApiHandler', () => {
 
       expect(response.status).toBe(500);
 
-      const responseData = await response.json();
+      const responseData = await response.json() as { error: string; message: string };
       expect(responseData).toEqual({
         error: 'Internal server error',
         message: 'Logger failed'
@@ -282,7 +292,7 @@ describe('ApiHandler', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('application/json');
 
-      const responseData = await response.json();
+      const responseData = await response.json() as { status: string; timestamp: string; version: string };
       expect(responseData).toEqual({
         status: 'healthy',
         timestamp: expect.any(String),
@@ -304,7 +314,7 @@ describe('ApiHandler', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('application/json');
       
-      const responseData = await response.json();
+      const responseData = await response.json() as { status: string; timestamp: string; version: string };
       expect(responseData.status).toBe('healthy');
       expect(responseData.timestamp).toBeDefined();
       expect(responseData.version).toBe('1.0.0');
