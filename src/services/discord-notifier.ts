@@ -91,7 +91,7 @@ export class DiscordNotifier {
         footer: {
           text: feedName,
         },
-        timestamp: new Date(article.published_date).toISOString(),
+        timestamp: this.getValidTimestamp(article.published_date),
       }],
     };
   }
@@ -122,6 +122,20 @@ export class DiscordNotifier {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  private getValidTimestamp(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        // 無効な日付の場合は現在時刻を使用
+        return new Date().toISOString();
+      }
+      return date.toISOString();
+    } catch (error) {
+      // エラーが発生した場合も現在時刻を使用
+      return new Date().toISOString();
+    }
+  }
+
   async testNotification(): Promise<boolean> {
     if (!this.webhookUrl) {
       this.logger.warn('Discord webhook URL not configured for testing');
@@ -134,7 +148,7 @@ export class DiscordNotifier {
       url: 'https://example.com/test',
       published_date: new Date().toISOString(),
       feed_source: 'aws',
-      original_content: null,
+      original_content: '',
       summary_ja: 'これはDiscord連携のテスト通知です。正常に動作していることを確認してください。',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

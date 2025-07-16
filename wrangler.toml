@@ -27,4 +27,4 @@ migrations_dir = "migrations"
 ENVIRONMENT = "production"
 
 [env.production.triggers]
-crons = ["30 6 * * *"]
+crons = ["30 21 * * *"]

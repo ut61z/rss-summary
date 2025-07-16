@@ -4,7 +4,23 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { RSSFetcher } from '../src/services/rss-fetcher';
 import { AISummarizer } from '../src/services/ai-summarizer';
-import type { RSSFeedItem } from '../src/types';
+import { DiscordNotifier } from '../src/services/discord-notifier';
+import type { RSSFeedItem, Article } from '../src/types';
+
+// スクリプト用のシンプルなロガー
+class SimpleLogger {
+  async info(message: string, details?: any): Promise<void> {
+    console.log(`[INFO] ${message}`, details ? JSON.stringify(details, null, 2) : '');
+  }
+
+  async error(message: string, details?: any): Promise<void> {
+    console.error(`[ERROR] ${message}`, details ? JSON.stringify(details, null, 2) : '');
+  }
+
+  async warn(message: string, details?: any): Promise<void> {
+    console.warn(`[WARN] ${message}`, details ? JSON.stringify(details, null, 2) : '');
+  }
+}
 
 // .dev.varsファイルから環境変数を読み込む
 function loadDevVars() {
@@ -42,8 +58,22 @@ async function debugSummary() {
 
   const fetcher = new RSSFetcher();
   const summarizer = new AISummarizer(apiKey);
+  const logger = new SimpleLogger();
+  const discordNotifier = new DiscordNotifier({
+    DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,
+    ENVIRONMENT: process.env.ENVIRONMENT || 'development'
+  }, logger);
 
   try {
+    // Discordテスト通知を先に実行
+    console.log('📨 Discord通知のテストを実行中...');
+    const testResult = await discordNotifier.testNotification();
+    if (testResult) {
+      console.log('✅ Discord通知テスト成功\n');
+    } else {
+      console.log('⚠️ Discord通知テスト失敗または未設定\n');
+    }
+
     // AWS と Martin Fowler から記事を取得
     console.log('📡 RSSフィードから記事を取得中...');
     const awsArticles = await fetcher.fetchAWSFeed();
@@ -77,6 +107,8 @@ async function debugSummary() {
       console.log(`📅 公開日: ${article.published_date}`);
       console.log(`📝 元コンテンツ長: ${article.content?.length || 0}文字`);
       
+      let summary = '';
+      
       if (article.content) {
         console.log('\n🤖 AI要約を生成中...');
         try {
@@ -84,16 +116,43 @@ async function debugSummary() {
             title: article.title,
             content: article.content
           });
-          const summary = result.summary;
+          summary = result.summary;
           
           console.log(`✅ 要約完了 (${summary.length}文字):`);
           console.log(`📋 要約: ${summary}`);
           
         } catch (error) {
           console.log(`❌ 要約生成エラー: ${error instanceof Error ? error.message : String(error)}`);
+          summary = '要約生成に失敗しました';
         }
       } else {
         console.log('⚠️ 元コンテンツが空のため要約をスキップ');
+        summary = '元コンテンツが空のため要約なし';
+      }
+
+      // Discord通知のテスト（要約が生成された記事のみ）
+      if (summary && summary !== '要約生成に失敗しました' && summary !== '元コンテンツが空のため要約なし') {
+        console.log('\n📨 Discord通知を送信中...');
+        try {
+          // Articleオブジェクトを作成
+          const testArticle: Article = {
+            id: 1000000 + i, // テスト用ID
+            title: article.title,
+            url: article.url,
+            published_date: article.published_date,
+            feed_source: i === 0 ? 'aws' : 'martinfowler', // 最初の記事はAWS、2番目はMartin Fowler
+            original_content: article.content || '',
+            summary_ja: summary,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          await discordNotifier.notifyNewArticle(testArticle);
+          console.log('✅ Discord通知送信完了');
+          
+        } catch (error) {
+          console.log(`❌ Discord通知エラー: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
       
       console.log('\n' + '='.repeat(50) + '\n');
