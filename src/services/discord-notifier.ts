@@ -91,7 +91,7 @@ export class DiscordNotifier {
         footer: {
           text: feedName,
         },
-        timestamp: new Date(article.published_date).toISOString(),
+        timestamp: this.getValidTimestamp(article.published_date),
       }],
     };
   }
@@ -120,6 +120,20 @@ export class DiscordNotifier {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private getValidTimestamp(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        // 無効な日付の場合は現在時刻を使用
+        return new Date().toISOString();
+      }
+      return date.toISOString();
+    } catch (error) {
+      // エラーが発生した場合も現在時刻を使用
+      return new Date().toISOString();
+    }
   }
 
   async testNotification(): Promise<boolean> {
