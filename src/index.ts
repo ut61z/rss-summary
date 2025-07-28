@@ -9,7 +9,7 @@ import { WebHandler } from './handlers/web';
 import type { Environment } from './types';
 
 export default {
-  async fetch(request: Request, env: Environment, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Environment, _ctx: ExecutionContext): Promise<Response> {
     // Initialize services
     const logger = new Logger(env.DB);
     const database = new DatabaseService(env.DB);
@@ -98,7 +98,7 @@ export default {
     }
   },
 
-  async scheduled(event: ScheduledEvent, env: Environment, ctx: ExecutionContext): Promise<void> {
+  async scheduled(event: ScheduledEvent, env: Environment, _ctx: ExecutionContext): Promise<void> {
     // Initialize services for scheduled event
     const logger = new Logger(env.DB);
     const database = new DatabaseService(env.DB);

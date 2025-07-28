@@ -85,7 +85,7 @@ export class DiscordNotifier {
     return {
       embeds: [{
         title: article.title,
-        description: article.summary_ja && article.summary_ja !== 'null' ? article.summary_ja : '要約なし',
+        description: article.summary_ja || '要約なし',
         url: article.url,
         color,
         footer: {

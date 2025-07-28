@@ -133,7 +133,11 @@ export class CronHandler {
       summary_ja: summary
     };
 
-    const savedArticle = await this.database.saveArticle(articleData);
+    await this.database.saveArticle(articleData);
+
+    // 保存された記事の完全なオブジェクトを取得してDiscord通知に使用
+    const savedArticle = await this.database.getArticleByUrl(article.url);
+
     return { isNew: true, savedArticle }; // New article was saved
   }
 
