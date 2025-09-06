@@ -1,7 +1,7 @@
 # RSS Feed System - Technical Specifications
 
 ## Project Overview
-RSSフィードを取得して日本語要約し、時系列でカード表示するWebアプリケーション
+RSSフィードを取得して日本語要約し、Discordへ通知するバックエンドサービス（Web UIなし）。手動実行用の管理APIのみ提供する。
 
 ## Requirements
 
@@ -10,8 +10,8 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
   - AWS新機能情報: https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/
   - Martin Fowlerブログ: https://martinfowler.com/feed.atom
 - 自動更新：毎日朝6:30（JST）
-- AI要約：Gemini APIで140字以内の日本語要約生成
-- 表示：カード形式、時系列、20件ずつページネーション
+- AI要約：Gemini API（gemini-2.0-flash）で日本語要約生成（実装側で最大400文字にバリデーション）
+- 表示：なし（Discord通知のみ）
 
 ### Non-Functional Requirements
 - エラーハンドリング：ログ出力のみ
@@ -22,7 +22,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - Runtime: Bun + TypeScript
 - Database: Cloudflare D1 (SQLite)
 - AI Service: Google Gemini API (Free Tier)
-- Frontend: Simple HTML/CSS/JavaScript
+- Frontend: なし（管理APIのみ）
 - Deployment: Cloudflare Workers
 - Scheduling: Cloudflare Cron Triggers
 
@@ -33,7 +33,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 2. **AI Summarizer**: Gemini API経由での要約生成
 3. **Database Layer**: D1データベース操作
 4. **Discord Notifier**: Webhook経由での通知送信
-5. **Web Server**: HTMLページ配信・API提供
+5. **Admin API**: 手動更新トリガー/ヘルスチェック
 6. **Scheduler**: Cron Job実行
 
 ### Data Flow
@@ -49,8 +49,6 @@ Gemini API (Summarization)
 D1 Database Storage
   ↓
 Discord Notification (per article)
-  ↓
-Web Interface Display
 ```
 
 ## Database Schema
@@ -93,8 +91,7 @@ CREATE INDEX idx_level ON logs(level);
 ├── src/
 │   ├── index.ts              # Main Cloudflare Worker entry point
 │   ├── handlers/
-│   │   ├── web.ts            # HTML page handlers
-│   │   ├── api.ts            # API endpoints
+│   │   ├── api.ts            # Admin API endpoints
 │   │   └── cron.ts           # Scheduled job handler
 │   ├── services/
 │   │   ├── rss-fetcher.ts    # RSS feed fetching & parsing
@@ -104,14 +101,8 @@ CREATE INDEX idx_level ON logs(level);
 │   │   └── logger.ts         # Logging utility
 │   ├── types/
 │   │   └── index.ts          # TypeScript type definitions
-│   ├── templates/
-│   │   ├── index.html        # Main page template
-│   │   └── styles.css        # CSS styles
-│   └── utils/
-│       ├── date.ts           # Date utilities
-│       └── pagination.ts     # Pagination helpers
 ├── migrations/
-│   └── 001_initial.sql       # Database migration
+│   └── 0001_initial.sql      # Database migration
 ├── wrangler.toml             # Cloudflare Workers configuration
 ├── package.json
 └── tsconfig.json
@@ -119,21 +110,19 @@ CREATE INDEX idx_level ON logs(level);
 
 ## API Specifications
 
-### GET /
-- メインページ（HTML）を返す
-- Query Parameters:
-  - `page`: ページ番号（デフォルト: 1）
-  - `source`: フィルター ('aws', 'martinfowler', 'all')
-
-### GET /api/articles
-- 記事一覧をJSON形式で返す
-- Query Parameters:
-  - `page`: ページ番号
-  - `limit`: 1ページあたりの件数（デフォルト: 20）
-  - `source`: フィルター
-
 ### POST /api/cron/update-feeds
-- RSS更新の手動実行（開発・テスト用）
+- RSS更新の手動実行（管理者向け）
+- 認可: `Authorization: Bearer ${ADMIN_TOKEN}` 必須
+- 戻り値: `{ success: boolean, message?: string, error?: string }`
+
+### POST /api/discord/test
+- Discord通知の疎通確認（管理者向け）
+- 認可: `Authorization: Bearer ${ADMIN_TOKEN}` 必須
+- 戻り値: `{ success: boolean, message: string }`
+
+### GET /api/health
+- サービスのヘルスチェック
+- 戻り値: `{ status: 'healthy', timestamp: string, version: string }`
 
 ## Environment Variables
 ```bash
@@ -142,6 +131,7 @@ GEMINI_API_KEY=your_gemini_api_key
 DISCORD_WEBHOOK_URL=your_discord_webhook_url
 DB=your_d1_database_binding
 ENVIRONMENT=production # or development
+ADMIN_TOKEN=your_admin_bearer_token
 ```
 
 ## Discord Integration
@@ -156,7 +146,7 @@ ENVIRONMENT=production # or development
 interface DiscordMessage {
   embeds: [{
     title: string;           // 記事タイトル
-    description: string;     // 140字要約
+    description: string;     // 日本語要約（実装で最大400文字）
     url: string;            // 元記事URL
     color: number;          // フィード別色（AWS: 0x3498db, Martin Fowler: 0x2ecc71）
     footer: {
@@ -170,11 +160,11 @@ interface DiscordMessage {
 ### Error Handling
 - Discord送信失敗: ログ記録、処理継続
 - Webhook URL無効: ログ記録、Discord送信スキップ
-- Model: gemini-1.5-flash
+- Model: gemini-2.0-flash
 - Rate Limits: 15 requests/minute, 1500 requests/day
 - Prompt Template:
 ```
-以下の英語記事を140字以内の日本語で要約してください。技術的な内容を正確に、読みやすく伝えてください。
+以下の英語記事を日本語で簡潔に要約してください。技術的内容を正確に読みやすく伝え、冗長な表現は避けてください。実装側で最大400文字に収めます。
 
 タイトル: {title}
 内容: {content}
@@ -193,7 +183,6 @@ interface DiscordMessage {
 - RSS解析: 並列処理で複数フィード同時取得
 - AI要約: レート制限を考慮した順次処理
 - DB操作: バッチ処理でパフォーマンス向上
-- フロントエンド: 必要最小限のJavaScript
 
 ## Development Guidelines
 - TypeScript strict mode使用

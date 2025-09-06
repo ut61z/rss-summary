@@ -5,8 +5,24 @@ import { AISummarizer } from './services/ai-summarizer';
 import { DiscordNotifier } from './services/discord-notifier';
 import { CronHandler } from './handlers/cron';
 import { ApiHandler } from './handlers/api';
-import { WebHandler } from './handlers/web';
 import type { Environment } from './types';
+
+function unauthorized(): Response {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: {
+      'Content-Type': 'application/json',
+      'WWW-Authenticate': 'Bearer',
+      'Access-Control-Allow-Origin': '*'
+    }
+  });
+}
+
+function isAuthorized(request: Request, env: Environment): boolean {
+  const auth = request.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  return Boolean(env.ADMIN_TOKEN) && token === env.ADMIN_TOKEN;
+}
 
 export default {
   async fetch(request: Request, env: Environment, _ctx: ExecutionContext): Promise<Response> {
@@ -19,7 +35,6 @@ export default {
     
     // Initialize handlers
     const apiHandler = new ApiHandler(database, logger);
-    const webHandler = new WebHandler(database, logger);
 
     try {
       const url = new URL(request.url);
@@ -31,13 +46,10 @@ export default {
         return apiHandler.handleOptionsRequest();
       }
 
-      // API Routes
+      // API Routes (Web UIは廃止)
       if (pathname.startsWith('/api/')) {
-        if (pathname === '/api/articles' && method === 'GET') {
-          return apiHandler.handleArticlesRequest(request);
-        }
-        
         if (pathname === '/api/cron/update-feeds' && method === 'POST') {
+          if (!isAuthorized(request, env)) return unauthorized();
           const cronHandler = new CronHandler(logger, database, rssFetcher, aiSummarizer, discordNotifier);
           return cronHandler.handleManualTrigger();
         }
@@ -47,6 +59,7 @@ export default {
         }
 
         if (pathname === '/api/discord/test' && method === 'POST') {
+          if (!isAuthorized(request, env)) return unauthorized();
           const result = await discordNotifier.testNotification();
           return new Response(JSON.stringify({
             success: result,
@@ -67,10 +80,7 @@ export default {
         });
       }
 
-      // Web Routes
-      if (pathname === '/' || pathname === '/index.html') {
-        return webHandler.handleHomeRequest(request);
-      }
+      // ルートアクセスは404（Web UI廃止のため）
 
       // Static files or other routes - return 404
       return new Response('Not Found', {
