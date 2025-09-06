@@ -56,7 +56,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve('Invalid XML')
       });
 
-      await expect(rssFetcher.fetchAWSFeed()).rejects.toThrow('Failed to parse AWS RSS feed');
+      await expect(rssFetcher.fetchAWSFeed()).rejects.toThrow('Failed to parse RSS feed');
     });
 
     it('should handle empty RSS feed', async () => {
@@ -119,7 +119,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve('Invalid XML')
       });
 
-      await expect(rssFetcher.fetchMartinFowlerFeed()).rejects.toThrow('Failed to parse Martin Fowler Atom feed');
+      await expect(rssFetcher.fetchMartinFowlerFeed()).rejects.toThrow('Failed to parse Atom feed');
     });
 
     it('should parse Martin Fowler Atom feed with updated field', async () => {
@@ -157,8 +157,45 @@ describe('RSSFetcher', () => {
     });
   });
 
+  describe('fetchGitHubChangelogFeed', () => {
+    it('should fetch and parse GitHub Changelog RSS feed', async () => {
+      const mockRSSXML = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<item>
+<title>GitHub Change</title>
+<link>https://github.blog/changelog/some-change/</link>
+<pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+<description>Changelog content</description>
+</item>
+</channel>
+</rss>`;
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(mockRSSXML)
+      });
+
+      const result = await rssFetcher.fetchGitHubChangelogFeed();
+
+      expect(mockFetch).toHaveBeenCalledWith('https://github.blog/changelog/feed/');
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        title: 'GitHub Change',
+        url: 'https://github.blog/changelog/some-change/',
+        published_date: '2024-01-01T12:00:00.000Z',
+        content: 'Changelog content'
+      });
+    });
+
+    it('should handle fetch errors gracefully', async () => {
+      mockFetch.mockRejectedValue(new Error('Network error'));
+      await expect(rssFetcher.fetchGitHubChangelogFeed()).rejects.toThrow('Failed to fetch GitHub Changelog RSS feed: Network error');
+    });
+  });
+
   describe('fetchAllFeeds', () => {
-    it('should fetch both feeds and return combined results', async () => {
+    it('should fetch all feeds and return combined results', async () => {
       const mockRSSXML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 <channel>
@@ -181,6 +218,18 @@ describe('RSSFetcher', () => {
 </entry>
 </feed>`;
 
+      const mockGithubRSS = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<item>
+<title>GitHub Article</title>
+<link>https://github.blog/changelog/test</link>
+<pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+<description>GitHub content</description>
+</item>
+</channel>
+</rss>`;
+
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -189,14 +238,20 @@ describe('RSSFetcher', () => {
         .mockResolvedValueOnce({
           ok: true,
           text: () => Promise.resolve(mockAtomXML)
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve(mockGithubRSS)
         });
 
       const result = await rssFetcher.fetchAllFeeds();
 
       expect(result.aws).toHaveLength(1);
       expect(result.martinfowler).toHaveLength(1);
+      expect(result.github_changelog).toHaveLength(1);
       expect(result.aws[0].title).toBe('AWS Article');
       expect(result.martinfowler[0].title).toBe('Martin Fowler Article');
+      expect(result.github_changelog[0].title).toBe('GitHub Article');
     });
 
     it('should handle partial failures gracefully', async () => {
@@ -213,12 +268,27 @@ describe('RSSFetcher', () => {
 <content type="html">Content</content>
 </entry>
 </feed>`)
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve(`<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<item>
+<title>GitHub Article</title>
+<link>https://github.blog/changelog/test</link>
+<pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+<description>Content</description>
+</item>
+</channel>
+</rss>`)
         });
 
       const result = await rssFetcher.fetchAllFeeds();
 
       expect(result.aws).toEqual([]);
       expect(result.martinfowler).toHaveLength(1);
+      expect(result.github_changelog).toHaveLength(1);
     });
   });
 

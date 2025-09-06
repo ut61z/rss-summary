@@ -40,15 +40,34 @@ export class RSSFetcher {
     }
   }
 
-  async fetchAllFeeds(): Promise<{ aws: RSSFeedItem[]; martinfowler: RSSFeedItem[] }> {
-    const [awsResult, martinFowlerResult] = await Promise.allSettled([
+  async fetchGitHubChangelogFeed(): Promise<RSSFeedItem[]> {
+    try {
+      const response = await fetch('https://github.blog/changelog/feed/');
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const xmlText = await response.text();
+      // GitHub ChangelogはRSS 2.0想定
+      return this.parseRSSFeed(xmlText, 'github_changelog');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to fetch GitHub Changelog RSS feed: ${errorMessage}`);
+    }
+  }
+
+  async fetchAllFeeds(): Promise<{ aws: RSSFeedItem[]; martinfowler: RSSFeedItem[]; github_changelog: RSSFeedItem[] }> {
+    const [awsResult, martinFowlerResult, githubResult] = await Promise.allSettled([
       this.fetchAWSFeed(),
-      this.fetchMartinFowlerFeed()
+      this.fetchMartinFowlerFeed(),
+      this.fetchGitHubChangelogFeed()
     ]);
 
     return {
       aws: awsResult.status === 'fulfilled' ? awsResult.value : [],
-      martinfowler: martinFowlerResult.status === 'fulfilled' ? martinFowlerResult.value : []
+      martinfowler: martinFowlerResult.status === 'fulfilled' ? martinFowlerResult.value : [],
+      github_changelog: githubResult.status === 'fulfilled' ? githubResult.value : []
     };
   }
 
@@ -75,7 +94,8 @@ export class RSSFetcher {
       }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to parse AWS RSS feed: ${errorMessage}`);
+      // sourceはログ用に使うだけなので固定文言は避ける
+      throw new Error(`Failed to parse RSS feed: ${errorMessage}`);
     }
   }
 
@@ -115,7 +135,7 @@ export class RSSFetcher {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to parse Martin Fowler Atom feed: ${errorMessage}`);
+      throw new Error(`Failed to parse Atom feed: ${errorMessage}`);
     }
   }
 
