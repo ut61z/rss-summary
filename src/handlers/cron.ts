@@ -4,6 +4,7 @@ import type { RSSFetcher } from '../services/rss-fetcher';
 import type { AISummarizer } from '../services/ai-summarizer';
 import type { DiscordNotifier } from '../services/discord-notifier';
 import type { RSSFeedItem } from '../types';
+import type { FeedSource } from '../config/feeds';
 
 export class CronHandler {
   constructor(
@@ -19,66 +20,34 @@ export class CronHandler {
       await this.logger.info('Starting RSS feed update');
 
       const feeds = await this.rssFetcher.fetchAllFeeds();
-      
+
       let processedCount = 0;
       let newArticlesCount = 0;
       let errorCount = 0;
       const newArticles: any[] = [];
 
-      // Process AWS articles
-      for (const article of feeds.aws) {
-        try {
-          const result = await this.processArticle(article, 'aws');
-          if (result.isNew && result.savedArticle) {
-            newArticlesCount++;
-            newArticles.push(result.savedArticle);
-          }
-          processedCount++;
-        } catch (error) {
-          errorCount++;
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          await this.logger.error('Failed to process article', {
-            url: article.url,
-            error: errorMessage
-          });
-        }
-      }
+      const entries = Object.entries(feeds) as Array<[FeedSource, RSSFeedItem[]]>;
+      const perSourceCounts: Record<string, number> = {};
 
-      // Process Martin Fowler articles
-      for (const article of feeds.martinfowler) {
-        try {
-          const result = await this.processArticle(article, 'martinfowler');
-          if (result.isNew && result.savedArticle) {
-            newArticlesCount++;
-            newArticles.push(result.savedArticle);
+      for (const [source, items] of entries) {
+        perSourceCounts[source] = items.length;
+        for (const article of items) {
+          try {
+            const result = await this.processArticle(article, source);
+            if (result.isNew && result.savedArticle) {
+              newArticlesCount++;
+              newArticles.push(result.savedArticle);
+            }
+            processedCount++;
+          } catch (error) {
+            errorCount++;
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            await this.logger.error('Failed to process article', {
+              url: article.url,
+              error: errorMessage,
+              source,
+            });
           }
-          processedCount++;
-        } catch (error) {
-          errorCount++;
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          await this.logger.error('Failed to process article', {
-            url: article.url,
-            error: errorMessage
-          });
-        }
-      }
-
-      // Process GitHub Changelog articles
-      for (const article of feeds.github_changelog) {
-        try {
-          const result = await this.processArticle(article, 'github_changelog');
-          if (result.isNew && result.savedArticle) {
-            newArticlesCount++;
-            newArticles.push(result.savedArticle);
-          }
-          processedCount++;
-        } catch (error) {
-          errorCount++;
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          await this.logger.error('Failed to process article', {
-            url: article.url,
-            error: errorMessage
-          });
         }
       }
 
@@ -102,9 +71,7 @@ export class CronHandler {
         processedCount,
         newArticlesCount,
         errorCount,
-        awsArticles: feeds.aws.length,
-        martinFowlerArticles: feeds.martinfowler.length,
-        githubChangelogArticles: feeds.github_changelog.length
+        perSourceCounts,
       });
 
     } catch (error) {
@@ -116,7 +83,7 @@ export class CronHandler {
     }
   }
 
-  async processArticle(article: RSSFeedItem, source: 'aws' | 'martinfowler' | 'github_changelog'): Promise<{isNew: boolean, savedArticle?: any}> {
+  async processArticle(article: RSSFeedItem, source: FeedSource): Promise<{isNew: boolean, savedArticle?: any}> {
     // Check if article already exists
     const existingArticle = await this.database.getArticleByUrl(article.url);
     if (existingArticle) {
