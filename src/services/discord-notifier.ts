@@ -1,5 +1,6 @@
 import type { Article } from '../types';
 import { Logger } from './logger';
+import { getFeedById } from '../config/feeds';
 
 interface DiscordWebhookPayload {
   embeds: Array<{
@@ -97,29 +98,13 @@ export class DiscordNotifier {
   }
 
   private getFeedColor(feedSource: string): number {
-    switch (feedSource) {
-      case 'aws':
-        return 0x3498db; // 青
-      case 'martinfowler':
-        return 0x2ecc71; // 緑
-      case 'github_changelog':
-        return 0x6e5494; // GitHub Purple
-      default:
-        return 0x95a5a6; // グレー
-    }
+    const def = getFeedById(feedSource);
+    return def?.color ?? 0x95a5a6; // デフォルトはグレー
   }
 
   private getFeedDisplayName(feedSource: string): string {
-    switch (feedSource) {
-      case 'aws':
-        return 'AWS ニュース';
-      case 'martinfowler':
-        return 'Martin Fowler';
-      case 'github_changelog':
-        return 'GitHub Changelog';
-      default:
-        return feedSource;
-    }
+    const def = getFeedById(feedSource);
+    return def?.displayName ?? feedSource;
   }
 
   private delay(ms: number): Promise<void> {

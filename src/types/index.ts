@@ -1,9 +1,11 @@
+import type { FeedSource } from '../config/feeds';
+
 export interface Article {
   id: number;
   title: string;
   url: string;
   published_date: string;
-  feed_source: 'aws' | 'martinfowler' | 'github_changelog';
+  feed_source: FeedSource;
   original_content?: string;
   summary_ja?: string;
   created_at: string;
@@ -42,7 +44,7 @@ export interface Environment {
 }
 
 export interface ArticleFilter {
-  source?: 'aws' | 'martinfowler' | 'github_changelog' | 'all';
+  source?: FeedSource | 'all';
   page?: number;
   limit?: number;
 }
