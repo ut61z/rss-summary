@@ -74,10 +74,11 @@ async function debugSummary() {
       console.log('⚠️ Discord通知テスト失敗または未設定\n');
     }
 
-    // AWS と Martin Fowler から記事を取得
+    // AWS / Martin Fowler / GitHub Changelog から記事を取得
     console.log('📡 RSSフィードから記事を取得中...');
     const awsArticles = await fetcher.fetchAWSFeed();
     const fowlerArticles = await fetcher.fetchMartinFowlerFeed();
+    const githubArticles = await fetcher.fetchGitHubChangelogFeed();
     
     // 最新の記事を1つずつピックアップ
     const testArticles: RSSFeedItem[] = [];
@@ -88,6 +89,9 @@ async function debugSummary() {
     
     if (fowlerArticles.length > 0) {
       testArticles.push(fowlerArticles[0]);
+    }
+    if (githubArticles.length > 0) {
+      testArticles.push(githubArticles[0]);
     }
 
     if (testArticles.length === 0) {
@@ -140,7 +144,7 @@ async function debugSummary() {
             title: article.title,
             url: article.url,
             published_date: article.published_date,
-            feed_source: i === 0 ? 'aws' : 'martinfowler', // 最初の記事はAWS、2番目はMartin Fowler
+            feed_source: i === 0 ? 'aws' : (i === 1 ? 'martinfowler' : 'github_changelog'),
             original_content: article.content || '',
             summary_ja: summary,
             created_at: new Date().toISOString(),

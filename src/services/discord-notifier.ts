@@ -102,6 +102,8 @@ export class DiscordNotifier {
         return 0x3498db; // 青
       case 'martinfowler':
         return 0x2ecc71; // 緑
+      case 'github_changelog':
+        return 0x6e5494; // GitHub Purple
       default:
         return 0x95a5a6; // グレー
     }
@@ -113,6 +115,8 @@ export class DiscordNotifier {
         return 'AWS ニュース';
       case 'martinfowler':
         return 'Martin Fowler';
+      case 'github_changelog':
+        return 'GitHub Changelog';
       default:
         return feedSource;
     }

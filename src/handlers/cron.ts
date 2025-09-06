@@ -63,6 +63,25 @@ export class CronHandler {
         }
       }
 
+      // Process GitHub Changelog articles
+      for (const article of feeds.github_changelog) {
+        try {
+          const result = await this.processArticle(article, 'github_changelog');
+          if (result.isNew && result.savedArticle) {
+            newArticlesCount++;
+            newArticles.push(result.savedArticle);
+          }
+          processedCount++;
+        } catch (error) {
+          errorCount++;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          await this.logger.error('Failed to process article', {
+            url: article.url,
+            error: errorMessage
+          });
+        }
+      }
+
       // Send Discord notifications for new articles
       if (newArticles.length > 0) {
         try {
@@ -84,7 +103,8 @@ export class CronHandler {
         newArticlesCount,
         errorCount,
         awsArticles: feeds.aws.length,
-        martinFowlerArticles: feeds.martinfowler.length
+        martinFowlerArticles: feeds.martinfowler.length,
+        githubChangelogArticles: feeds.github_changelog.length
       });
 
     } catch (error) {
@@ -96,7 +116,7 @@ export class CronHandler {
     }
   }
 
-  async processArticle(article: RSSFeedItem, source: 'aws' | 'martinfowler'): Promise<{isNew: boolean, savedArticle?: any}> {
+  async processArticle(article: RSSFeedItem, source: 'aws' | 'martinfowler' | 'github_changelog'): Promise<{isNew: boolean, savedArticle?: any}> {
     // Check if article already exists
     const existingArticle = await this.database.getArticleByUrl(article.url);
     if (existingArticle) {

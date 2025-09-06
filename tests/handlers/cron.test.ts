@@ -63,7 +63,8 @@ describe('CronHandler', () => {
             published_date: '2024-01-01T11:00:00.000Z',
             content: 'Martin Fowler content 1'
           }
-        ]
+        ],
+        github_changelog: []
       };
 
       const mockSummary = {
@@ -78,7 +79,8 @@ describe('CronHandler', () => {
       await cronHandler.handleScheduledEvent();
 
       expect(mockRSSFetcher.fetchAllFeeds).toHaveBeenCalled();
-      expect(mockDatabase.getArticleByUrl).toHaveBeenCalledTimes(2);
+      // 2件 * 事前存在確認 + 事後の再取得 = 4回
+      expect(mockDatabase.getArticleByUrl).toHaveBeenCalledTimes(4);
       expect(mockDatabase.saveArticle).toHaveBeenCalledTimes(2);
       expect(mockAISummarizer.summarizeArticle).toHaveBeenCalledTimes(2);
       expect(mockLogger.info).toHaveBeenCalledWith('RSS feed update completed successfully', expect.any(Object));
@@ -94,7 +96,8 @@ describe('CronHandler', () => {
             content: 'Existing content'
           }
         ],
-        martinfowler: []
+        martinfowler: [],
+        github_changelog: []
       };
 
       const existingArticle = {
@@ -138,7 +141,8 @@ describe('CronHandler', () => {
             content: 'Content'
           }
         ],
-        martinfowler: []
+        martinfowler: [],
+        github_changelog: []
       };
 
       mockRSSFetcher.fetchAllFeeds.mockResolvedValue(mockFeeds);
@@ -172,7 +176,8 @@ describe('CronHandler', () => {
             content: 'Content'
           }
         ],
-        martinfowler: []
+        martinfowler: [],
+        github_changelog: []
       };
 
       mockRSSFetcher.fetchAllFeeds.mockResolvedValue(mockFeeds);
@@ -199,7 +204,8 @@ describe('CronHandler', () => {
             content: 'Content'
           }
         ],
-        martinfowler: []
+        martinfowler: [],
+        github_changelog: []
       };
 
       mockRSSFetcher.fetchAllFeeds.mockResolvedValue(mockFeeds);
@@ -239,14 +245,28 @@ describe('CronHandler', () => {
 
       const mockSummary = { summary: 'テスト要約' };
 
-      mockDatabase.getArticleByUrl.mockResolvedValue(null);
+      mockDatabase.getArticleByUrl
+        .mockResolvedValueOnce(null) // 事前存在確認
+        .mockResolvedValueOnce({
+          id: 1,
+          title: 'Test Article',
+          url: 'https://example.com/test',
+          published_date: '2024-01-01T10:00:00.000Z',
+          feed_source: 'aws',
+          original_content: 'Test content',
+          summary_ja: 'テスト要約',
+          created_at: '2024-01-01T10:00:00.000Z',
+          updated_at: '2024-01-01T10:00:00.000Z'
+        });
       mockDatabase.saveArticle.mockResolvedValue(1);
       mockAISummarizer.summarizeArticle.mockResolvedValue(mockSummary);
 
       const result = await cronHandler.processArticle(article, 'aws');
 
       expect(result.isNew).toBe(true);
-      expect(result.savedArticle).toBe(1);
+      expect(result.savedArticle).toEqual(
+        expect.objectContaining({ id: 1, url: 'https://example.com/test' })
+      );
       expect(mockDatabase.saveArticle).toHaveBeenCalledWith({
         title: 'Test Article',
         url: 'https://example.com/test',

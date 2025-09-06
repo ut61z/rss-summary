@@ -3,7 +3,7 @@ export interface Article {
   title: string;
   url: string;
   published_date: string;
-  feed_source: 'aws' | 'martinfowler';
+  feed_source: 'aws' | 'martinfowler' | 'github_changelog';
   original_content?: string;
   summary_ja?: string;
   created_at: string;
@@ -42,7 +42,7 @@ export interface Environment {
 }
 
 export interface ArticleFilter {
-  source?: 'aws' | 'martinfowler' | 'all';
+  source?: 'aws' | 'martinfowler' | 'github_changelog' | 'all';
   page?: number;
   limit?: number;
 }
