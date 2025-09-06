@@ -8,13 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-RSSフィードを取得して日本語要約し、時系列でカード表示するWebアプリケーション：
+RSSフィードを取得して日本語要約し、Discordに通知するバックエンドサービス：
 - AWS新機能情報とMartin FowlerブログのRSSフィードを取得
-- Google Gemini 2.0-flash modelで日本語要約を生成（300文字制限）
-- レスポンシブデザインのSPAでカード形式表示（ソースフィルタリング・ページネーション付き）
-- Cloudflare WorkersとD1データベースで動作
-- 手動RSS更新機能付きWebインターフェース
-- Discord Webhookによる新記事・エラー通知機能
+- Google Gemini 2.0-flash で日本語要約を生成（実装で最大400文字にバリデーション）
+- Cloudflare Workers と D1 データベースで動作（Web UI なし）
+- 手動RSS更新は管理APIから実行
+- Discord Webhook に新記事を通知
 
 ## 技術スタック
 
@@ -22,7 +21,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - **データベース**: Cloudflare D1 (SQLite) - パフォーマンスインデックス付き
 - **AI サービス**: Google Gemini 2.0-flash model (15req/min, 1500req/day制限)
 - **XMLパーサー**: fast-xml-parser (RSS/Atom対応)
-- **フロントエンド**: レスポンシブSPA (HTML/CSS/JavaScript, モバイル対応)
+- **フロントエンド**: なし（管理APIのみ）
 - **テストフレームワーク**: Bun built-in test runner + comprehensive test suite
 - **開発ツール**: ESLint, mise runtime manager, デバッグ用スクリプト
 - **デプロイ**: Cloudflare Workers (production/staging/development環境分離)
@@ -40,8 +39,7 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 - `discord-notifier.ts`: Discord Webhookによる新記事・エラー通知処理
 
 ### ハンドラー層 (`src/handlers/`)
-- `web.ts`: HTMLページレンダリング・Web インターフェース
-- `api.ts`: 記事取得用REST API エンドポイント
+- `api.ts`: 管理API（手動トリガー、ヘルスチェック、Discord疎通）
 - `cron.ts`: 定期RSS更新ジョブ（毎日6:30 JST）
 
 ### データ層
@@ -71,24 +69,24 @@ RSSフィードを取得して日本語要約し、時系列でカード表示�
 必要な環境変数：
 - `GEMINI_API_KEY`: Google Gemini API キー（要約生成用）
 - `DISCORD_WEBHOOK_URL`: Discord Webhook URL（通知用、オプション）
+- `ADMIN_TOKEN`: 管理API用のベアラートークン
 - `DB`: D1データベースバインディング
 - `ENVIRONMENT`: production、staging、または development
 
 ## 主要ビジネスロジック
 
 ### RSS処理フロー
-1. Cronトリガーが毎日6:30 JSTに実行
-2. 2つのソースから取得：AWS新機能フィード、Martin Fowler Atomフィード
-3. 記事をパースし、URL一意性で重複チェック
-4. Gemini APIで300文字以内の日本語要約生成
-5. 要約付き記事をD1データベースに保存
-6. 新記事についてDiscord Webhookで通知送信（設定時）
+1. Cronトリガー（毎日 6:30 JST）
+2. 2ソース取得：AWS新機能フィード、Martin Fowler Atomフィード
+3. パース → URL一意性で重複チェック
+4. Gemini 2.0-flash で要約生成（実装で最大400文字）
+5. 記事を D1 データベースに保存
+6. 新記事を Discord Webhook で通知
 
 ### APIエンドポイント
-- `GET /`: メインHTMLページ（レスポンシブSPA、ページネーション・ソースフィルタリング付き）
-- `GET /api/articles`: 記事一覧JSON API（ページネーション・ソースフィルタ対応）
-- `POST /api/cron/update-feeds`: 手動RSS更新トリガー
-- `GET /api/health`: ヘルスチェックエンドポイント
+- `POST /api/cron/update-feeds`: 手動RSS更新トリガー（要 `Authorization: Bearer ${ADMIN_TOKEN}`）
+- `POST /api/discord/test`: Discord疎通テスト（要 `Authorization: Bearer ${ADMIN_TOKEN}`）
+- `GET /api/health`: ヘルスチェック
 - `OPTIONS /*`: CORS プリフライト対応
 
 ### エラーハンドリング戦略
@@ -137,9 +135,8 @@ CREATE TABLE logs (
 
 - **Gemini 2.0-flash API**: 15リクエスト/分、1500リクエスト/日（指数バックオフリトライ）
 - **RSS取得**: AWS・Martin Fowlerフィードの並列処理
-- **AI要約**: APIレート制限考慮の順次処理（300文字制限）
+- **AI要約**: APIレート制限考慮の順次処理（実装で最大400文字）
 - **データベース**: インデックス最適化、バッチ操作によるパフォーマンス向上
-- **Webインターフェース**: レスポンシブデザイン、ページネーション、リアルタイムフィルタリング
 
 ## フィード取得対象
 

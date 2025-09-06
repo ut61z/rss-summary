@@ -1,6 +1,5 @@
 import type { DatabaseService } from '../services/database';
 import type { Logger } from '../services/logger';
-import type { ArticleFilter } from '../types';
 
 export class ApiHandler {
   constructor(
@@ -8,59 +7,7 @@ export class ApiHandler {
     private logger: Logger
   ) {}
 
-  async handleArticlesRequest(request: Request): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      const searchParams = url.searchParams;
-
-      const filter: ArticleFilter = {
-        page: parseInt(searchParams.get('page') || '1'),
-        limit: parseInt(searchParams.get('limit') || '20'),
-        source: (searchParams.get('source') as 'aws' | 'martinfowler' | 'all') || 'all'
-      };
-
-      // Validate parameters
-      if ((filter.page || 0) < 1) filter.page = 1;
-      if ((filter.limit || 0) < 1 || (filter.limit || 0) > 100) filter.limit = 20;
-
-      const result = await this.database.getArticles(filter);
-
-      await this.logger.info('API articles request', {
-        page: filter.page,
-        limit: filter.limit,
-        source: filter.source,
-        total: result.total
-      });
-
-      return new Response(JSON.stringify(result), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        }
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await this.logger.error('API articles request failed', {
-        error: errorMessage,
-        url: request.url
-      });
-
-      return new Response(JSON.stringify({
-        error: 'Internal server error',
-        message: errorMessage
-      }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
-    }
-  }
+  // 記事一覧APIは廃止（Discord通知のみ運用）
 
   async handleCronTriggerRequest(request: Request): Promise<Response> {
     try {

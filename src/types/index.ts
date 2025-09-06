@@ -38,6 +38,7 @@ export interface Environment {
   GEMINI_API_KEY: string;
   DISCORD_WEBHOOK_URL?: string;
   ENVIRONMENT: string;
+  ADMIN_TOKEN?: string;
 }
 
 export interface ArticleFilter {
