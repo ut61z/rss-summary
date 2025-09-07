@@ -34,7 +34,7 @@ export class Logger {
     const offset = (page - 1) * limit;
     
     let query = 'SELECT * FROM logs';
-    const params: Array<string> = [];
+    const params: Array<string | number> = [];
     
     if (level) {
       query += ' WHERE level = ?';
@@ -46,6 +46,6 @@ export class Logger {
     
     const stmt = this.db.prepare(query);
     const result = await stmt.bind(...params).all();
-    return (result as { results: LogEntry[] }).results;
+    return (result as unknown as { results: LogEntry[] }).results;
   }
 }

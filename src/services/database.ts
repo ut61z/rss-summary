@@ -47,7 +47,7 @@ export class DatabaseService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: (articlesResult as { results: Article[] }).results,
+      data: (articlesResult as unknown as { results: Article[] }).results,
       total,
       page,
       limit,
