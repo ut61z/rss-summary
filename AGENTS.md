@@ -46,3 +46,16 @@
 - 保護対象: `POST /api/cron/update-feeds`、`POST /api/discord/test`。
 - ヘッダー: `Authorization: Bearer ${ADMIN_TOKEN}` を必須化。
 - 例: `curl -H "Authorization: Bearer $ADMIN_TOKEN" -X POST http://127.0.0.1:8787/api/cron/update-feeds`。
+
+## 設計思想（フィード拡張に強い構成）
+- 設定駆動: フィード定義を `src/config/feeds.ts` に集約し、`id`/`url`/`format(rss|atom|auto)`/`displayName`/`color`/`enabled` を宣言。追加は1行で完結。
+- 単一責務・疎結合: 取得（`RSSFetcher`）/処理（`CronHandler`）/通知（`DiscordNotifier`）/表示定義（`feeds.ts`）を分離。
+- フォーマット抽象化: RSS/Atom を統一インターフェースでパース。`auto` 指定時はXMLから自動判定。
+- 部分失敗許容: 取得は `Promise.allSettled` で並列実行し、失敗は局所化して継続。件数は `perSourceCounts` としてログ化。
+- 互換性維持: 既存公開メソッド（例: `fetchAWSFeed` など）は薄いラッパーで残し、外部I/Fとエラーメッセージの契約を維持。
+- 型一貫性: `FeedSource` を設定から導出し、`Article.feed_source` などに適用。
+
+### 運用手順（フィード追加）
+1. `src/config/feeds.ts` の `FEEDS` 配列にエントリを1つ追加。
+2. `npm run type-check` と `bun test` を実行して型とテストを確認。
+3. （任意）`bun run scripts/debug-summary.ts` で取得・要約・通知の流れを確認。
