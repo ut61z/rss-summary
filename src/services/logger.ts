@@ -3,21 +3,30 @@ import type { LogEntry } from '../types';
 export class Logger {
   constructor(private db: D1Database) {}
 
-  async info(message: string, details?: any): Promise<void> {
+  async info(message: string, details?: unknown): Promise<void> {
     await this.log('info', message, details);
   }
 
-  async error(message: string, details?: any): Promise<void> {
+  async error(message: string, details?: unknown): Promise<void> {
     await this.log('error', message, details);
   }
 
-  async warn(message: string, details?: any): Promise<void> {
+  async warn(message: string, details?: unknown): Promise<void> {
     await this.log('warn', message, details);
   }
 
-  private async log(level: 'info' | 'error' | 'warn', message: string, details?: any): Promise<void> {
+  private serializeDetails(details?: unknown): string | null {
+    if (details === undefined || details === null) return null;
+    try {
+      return JSON.stringify(details);
+    } catch {
+      return String(details);
+    }
+  }
+
+  private async log(level: 'info' | 'error' | 'warn', message: string, details?: unknown): Promise<void> {
     const stmt = this.db.prepare('INSERT INTO logs (level, message, details) VALUES (?, ?, ?)');
-    const detailsJson = details ? JSON.stringify(details) : null;
+    const detailsJson = this.serializeDetails(details);
     await stmt.bind(level, message, detailsJson).run();
   }
 
@@ -25,7 +34,7 @@ export class Logger {
     const offset = (page - 1) * limit;
     
     let query = 'SELECT * FROM logs';
-    let params: any[] = [];
+    const params: Array<string> = [];
     
     if (level) {
       query += ' WHERE level = ?';
@@ -37,6 +46,6 @@ export class Logger {
     
     const stmt = this.db.prepare(query);
     const result = await stmt.bind(...params).all();
-    return result.results as unknown as LogEntry[];
+    return (result as { results: LogEntry[] }).results;
   }
 }

@@ -9,15 +9,15 @@ import type { RSSFeedItem, Article } from '../src/types';
 
 // スクリプト用のシンプルなロガー
 class SimpleLogger {
-  async info(message: string, details?: any): Promise<void> {
+  async info(message: string, details?: unknown): Promise<void> {
     console.log(`[INFO] ${message}`, details ? JSON.stringify(details, null, 2) : '');
   }
 
-  async error(message: string, details?: any): Promise<void> {
+  async error(message: string, details?: unknown): Promise<void> {
     console.error(`[ERROR] ${message}`, details ? JSON.stringify(details, null, 2) : '');
   }
 
-  async warn(message: string, details?: any): Promise<void> {
+  async warn(message: string, details?: unknown): Promise<void> {
     console.warn(`[WARN] ${message}`, details ? JSON.stringify(details, null, 2) : '');
   }
 }

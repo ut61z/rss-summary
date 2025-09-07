@@ -5,13 +5,13 @@ import { join } from 'path';
 import { DiscordNotifier } from '../src/services/discord-notifier';
 
 class SimpleLogger {
-  async info(message: string, details?: any): Promise<void> {
+  async info(message: string, details?: unknown): Promise<void> {
     console.log(`[INFO] ${message}`, details ? JSON.stringify(details, null, 2) : '');
   }
-  async error(message: string, details?: any): Promise<void> {
+  async error(message: string, details?: unknown): Promise<void> {
     console.error(`[ERROR] ${message}`, details ? JSON.stringify(details, null, 2) : '');
   }
-  async warn(message: string, details?: any): Promise<void> {
+  async warn(message: string, details?: unknown): Promise<void> {
     console.warn(`[WARN] ${message}`, details ? JSON.stringify(details, null, 2) : '');
   }
 }
@@ -48,7 +48,7 @@ async function main() {
   const notifier = new DiscordNotifier({
     DISCORD_WEBHOOK_URL: webhook,
     ENVIRONMENT: process.env.ENVIRONMENT || 'development'
-  }, logger as any);
+  }, logger);
 
   const ok = await notifier.testNotification();
   if (ok) {
@@ -62,4 +62,3 @@ main().catch(err => {
   console.error('❌ 実行エラー:', err instanceof Error ? err.message : String(err));
   process.exit(1);
 });
-
