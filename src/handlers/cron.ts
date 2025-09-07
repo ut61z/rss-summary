@@ -3,7 +3,7 @@ import type { DatabaseService } from '../services/database';
 import type { RSSFetcher } from '../services/rss-fetcher';
 import type { AISummarizer } from '../services/ai-summarizer';
 import type { DiscordNotifier } from '../services/discord-notifier';
-import type { RSSFeedItem } from '../types';
+import type { RSSFeedItem, Article } from '../types';
 import type { FeedSource } from '../config/feeds';
 
 export class CronHandler {
@@ -24,7 +24,7 @@ export class CronHandler {
       let processedCount = 0;
       let newArticlesCount = 0;
       let errorCount = 0;
-      const newArticles: any[] = [];
+      const newArticles: Article[] = [];
 
       const entries = Object.entries(feeds) as Array<[FeedSource, RSSFeedItem[]]>;
       const perSourceCounts: Record<string, number> = {};
@@ -83,7 +83,7 @@ export class CronHandler {
     }
   }
 
-  async processArticle(article: RSSFeedItem, source: FeedSource): Promise<{isNew: boolean, savedArticle?: any}> {
+  async processArticle(article: RSSFeedItem, source: FeedSource): Promise<{ isNew: boolean; savedArticle?: Article }> {
     // Check if article already exists
     const existingArticle = await this.database.getArticleByUrl(article.url);
     if (existingArticle) {
@@ -124,8 +124,7 @@ export class CronHandler {
 
     // 保存された記事の完全なオブジェクトを取得してDiscord通知に使用
     const savedArticle = await this.database.getArticleByUrl(article.url);
-
-    return { isNew: true, savedArticle }; // New article was saved
+    return { isNew: true, savedArticle: savedArticle ?? undefined };
   }
 
   async handleManualTrigger(): Promise<Response> {

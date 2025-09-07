@@ -91,18 +91,24 @@ export class RSSFetcher {
         throw new Error('Invalid XML format');
       }
 
-      const parsed = this.xmlParser.parse(xmlText);
-      if (!parsed.rss || !parsed.rss.channel) return [];
+      type RSSItemNode = { title?: string; link?: string; pubDate?: string; description?: string };
+      type RSSParsed = { rss?: { channel?: { item?: RSSItemNode | RSSItemNode[] } } };
 
-      const items = parsed.rss.channel.item || [];
+      const parsed = this.xmlParser.parse(xmlText) as RSSParsed;
+      const items = parsed.rss?.channel?.item ?? [];
       const itemArray = Array.isArray(items) ? items : [items];
 
-      return itemArray.map((item: any) => ({
-        title: item.title || '',
-        url: item.link || '',
-        published_date: this.parseRSSDate(item.pubDate),
-        content: item.description || '',
-      }));
+      const toItem = (item: unknown): RSSFeedItem => {
+        const i = (typeof item === 'object' && item !== null ? item : {}) as RSSItemNode;
+        return {
+          title: i.title ?? '',
+          url: i.link ?? '',
+          published_date: this.parseRSSDate(i.pubDate ?? ''),
+          content: i.description ?? '',
+        };
+      };
+
+      return itemArray.map(toItem);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to parse RSS feed: ${errorMessage}`);
@@ -115,43 +121,53 @@ export class RSSFetcher {
         throw new Error('Invalid XML format');
       }
 
-      const parsed = this.xmlParser.parse(xmlText);
-      if (!parsed.feed) return [];
+      type AtomLink = { ['@_rel']?: string; ['@_href']?: string };
+      type AtomContent = string | { ['#text']?: string };
+      type AtomEntryNode = {
+        title?: string;
+        link?: AtomLink | AtomLink[] | string;
+        updated?: string;
+        published?: string;
+        content?: AtomContent;
+        summary?: string;
+      };
+      type AtomParsed = { feed?: { entry?: AtomEntryNode | AtomEntryNode[] } };
 
-      const entries = parsed.feed.entry || [];
+      const parsed = this.xmlParser.parse(xmlText) as AtomParsed;
+      const entries = parsed.feed?.entry ?? [];
       const entryArray = Array.isArray(entries) ? entries : [entries];
 
-      return entryArray.map((entry: any) => {
-        let content = '';
-        if (entry.content) {
-          if (typeof entry.content === 'string') {
-            content = entry.content;
-          } else if (entry.content['#text']) {
-            content = entry.content['#text'];
-          }
-        } else if (entry.summary) {
-          content = entry.summary;
-        }
+      const getContent = (c?: AtomContent, summary?: string): string => {
+        if (!c) return summary ?? '';
+        if (typeof c === 'string') return c;
+        if ('#text' in c && typeof c['#text'] === 'string') return c['#text'];
+        return summary ?? '';
+      };
 
-        // Atomのlink要素は配列/オブジェクト/文字列のいずれか
-        let url = '';
-        const link = entry.link;
+      const isAtomLink = (v: unknown): v is AtomLink => {
+        if (typeof v !== 'object' || v === null) return false;
+        const r = v as Record<string, unknown>;
+        return '@_href' in r || '@_rel' in r;
+      };
+
+      const resolveLink = (link: AtomEntryNode['link']): string => {
+        if (!link) return '';
+        if (typeof link === 'string') return link;
         if (Array.isArray(link)) {
-          const alt = link.find((l: any) => l['@_rel'] === 'alternate');
-          url = alt?.['@_href'] || link[0]?.['@_href'] || '';
-        } else if (typeof link === 'object' && link) {
-          url = link['@_href'] || '';
-        } else if (typeof link === 'string') {
-          url = link;
+          const objs = link.filter(isAtomLink);
+          const alt = objs.find((l) => l['@_rel'] === 'alternate');
+          return alt?.['@_href'] ?? objs[0]?.['@_href'] ?? '';
         }
+        if (isAtomLink(link)) return link['@_href'] ?? '';
+        return '';
+      };
 
-        return {
-          title: entry.title || '',
-          url,
-          published_date: this.parseRSSDate(entry.updated || entry.published),
-          content,
-        };
-      });
+      return entryArray.map((entry) => ({
+        title: entry?.title ?? '',
+        url: resolveLink(entry?.link),
+        published_date: this.parseRSSDate(entry?.updated ?? entry?.published ?? ''),
+        content: getContent(entry?.content, entry?.summary),
+      }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to parse Atom feed: ${errorMessage}`);

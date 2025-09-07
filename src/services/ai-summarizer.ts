@@ -1,8 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { SummaryRequest, SummaryResponse } from '../types';
 
+export interface GenerateContentResponse {
+  response: { text(): string };
+}
+
 export interface GenerativeModel {
-  generateContent(request: any): Promise<any>;
+  generateContent(input: string): Promise<GenerateContentResponse>;
 }
 
 export class AISummarizer {
@@ -18,7 +22,7 @@ export class AISummarizer {
   }
 
   async summarizeArticle(request: SummaryRequest, maxRetries: number = 3): Promise<SummaryResponse> {
-    let lastError: Error;
+    let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -35,8 +39,8 @@ export class AISummarizer {
         const truncatedSummary = this.validateAndTruncate(summary);
 
         return { summary: truncatedSummary };
-      } catch (error) {
-        lastError = error as Error;
+      } catch (e) {
+        lastError = e as Error;
         
         if (attempt === maxRetries) {
           if (attempt > 1) {
@@ -48,7 +52,7 @@ export class AISummarizer {
         // Wait before retry (exponential backoff)
         const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
         const delay = isTest ? 1 : Math.pow(2, attempt) * 1000;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
@@ -95,7 +99,7 @@ export class AISummarizer {
       
       await this.summarizeArticle(testRequest);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

@@ -27,7 +27,7 @@ export class DatabaseService {
 
     let query = 'SELECT * FROM articles';
     let countQuery = 'SELECT COUNT(*) as count FROM articles';
-    const params: any[] = [];
+    const params: string[] = [];
 
     if (source && source !== 'all') {
       query += ' WHERE feed_source = ?';
@@ -36,18 +36,18 @@ export class DatabaseService {
     }
 
     query += ' ORDER BY published_date DESC LIMIT ? OFFSET ?';
-    const queryParams = [...params, limit, offset];
+    const queryParams: Array<string | number> = [...params, limit, offset];
 
     const [articlesResult, countResult] = await Promise.all([
       this.db.prepare(query).bind(...queryParams).all(),
       this.db.prepare(countQuery).bind(...params).first()
     ]);
 
-    const total = (countResult as any)?.count || 0;
+    const total = (countResult as { count: number } | null)?.count ?? 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: articlesResult.results as unknown as Article[],
+      data: (articlesResult as unknown as { results: Article[] }).results,
       total,
       page,
       limit,
@@ -72,7 +72,7 @@ export class DatabaseService {
   async getArticleCount(): Promise<number> {
     const stmt = this.db.prepare('SELECT COUNT(*) as count FROM articles');
     const result = await stmt.first();
-    return (result as any)?.count || 0;
+    return (result as { count: number } | null)?.count ?? 0;
   }
 
   async deleteOldArticles(daysToKeep: number = 365): Promise<void> {

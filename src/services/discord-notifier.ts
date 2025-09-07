@@ -1,5 +1,5 @@
 import type { Article } from '../types';
-import { Logger } from './logger';
+import type { Logger } from './logger';
 import { getFeedById } from '../config/feeds';
 
 interface DiscordWebhookPayload {
@@ -22,9 +22,9 @@ interface Environment {
 
 export class DiscordNotifier {
   private readonly webhookUrl: string | undefined;
-  private readonly logger: Logger;
+  private readonly logger: Pick<Logger, 'info' | 'warn' | 'error'>;
 
-  constructor(env: Environment, logger: Logger) {
+  constructor(env: Environment, logger: Pick<Logger, 'info' | 'warn' | 'error'>) {
     this.webhookUrl = env.DISCORD_WEBHOOK_URL;
     this.logger = logger;
   }
@@ -119,8 +119,7 @@ export class DiscordNotifier {
         return new Date().toISOString();
       }
       return date.toISOString();
-    } catch (error) {
-      // エラーが発生した場合も現在時刻を使用
+    } catch {
       return new Date().toISOString();
     }
   }

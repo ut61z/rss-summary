@@ -10,7 +10,7 @@
     "test:watch": "bun test --watch",
     "db:migrate": "wrangler d1 migrations apply rss-summary-db",
     "db:create": "wrangler d1 create rss-summary-db",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "debug:summary": "bun run scripts/debug-summary.ts",
     "discord:test": "bun run scripts/discord-test.ts"
