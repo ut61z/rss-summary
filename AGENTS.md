@@ -15,6 +15,24 @@
 - DB: `npm run db:create`（D1 作成）、`npm run db:migrate`（マイグレーション適用）。
 - デバッグ: `bun run scripts/debug-summary.ts`（要約ロジック単体確認）。
 
+## 開発フロー（Green 維持）
+- 変更を加えるたびに以下を実行し、全て成功（green）であることを必ず確認する。
+  - `bun run lint`（ESLint）
+  - `bun run type-check`（TypeScript 型検査）
+  - `bun test`（ユニットテスト）
+- ウォッチ活用（任意）: `bun test --watch` でテストを常時実行し、素早くフィードバックを得る。
+- CI 互換性: 上記コマンドは GitHub Actions（`ci.yml`）と同一。ローカルで green なら CI も原則通過する。
+- 自動修正（任意）: フォーマット起因の指摘は `bun run lint -- --fix` で自動修正を適用できる。
+
+### pre-commit（Husky）
+- 目的: コミット前に `lint` / `type-check` / `test` を自動実行して、失敗コミットを防ぐ。
+- セットアップ（初回のみ）:
+  1) 依存追加: `bun add -D husky`（または `npm i -D husky`）
+  2) フック有効化: `npm run prepare`（`package.json` に設定済み）
+  3) 既存の `.husky/pre-commit` は用意済み。権限がない場合は `chmod +x .husky/pre-commit`
+- 実行内容: `bun run precommit:check`（= `bun run lint && bun run type-check && bun test`）
+- 注意: Bun が必要（`bun -v`）。未インストールの環境では hook がエラー終了する。
+
 ## コーディング規約・命名
 - 言語: TypeScript（`strict: true`）。インデント 2 スペース、末尾セミコロン省略可。
 - ファイル名: `kebab-case`（例: `ai-summarizer.ts`）。クラス: `PascalCase`。変数/関数: `camelCase`。定数: `UPPER_SNAKE_CASE`。
@@ -30,7 +48,7 @@
 ## コミットと Pull Request
 - スタイル: Conventional Commits（例: `feat:`, `fix:`, `docs:`, `test:`, `chore:`）。
 - 例: `fix: Discord 通知の Invalid time value を修正`、`test: add RSSFetcher invalid XML cases`。
-- PR には説明、関連 Issue、動作確認手順（スクリーンショットや `curl` 結果）を含める。CI 相当として以下を手元で実施: `npm test`、`npm run lint`、`npm run type-check`。
+- PR には説明、関連 Issue、動作確認手順（スクリーンショットや `curl` 結果）を含める。コミット/PR 前に必ず以下をローカルで green にする: `bun run lint`、`bun run type-check`、`bun test`。
 
 ## セキュリティと設定
 - 秘密情報は `.dev.vars`（ローカル）に置き、コミットしない。例:
