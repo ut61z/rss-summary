@@ -6,6 +6,7 @@ import { RSSFetcher } from '../src/services/rss-fetcher';
 import { AISummarizer } from '../src/services/ai-summarizer';
 import { DiscordNotifier } from '../src/services/discord-notifier';
 import type { RSSFeedItem, Article } from '../src/types';
+import type { FeedSource } from '../src/config/feeds';
 
 // スクリプト用のシンプルなロガー
 class SimpleLogger {
@@ -74,38 +75,33 @@ async function debugSummary() {
       console.log('⚠️ Discord通知テスト失敗または未設定\n');
     }
 
-    // AWS / Martin Fowler / GitHub Changelog から記事を取得
+    // AWS / Martin Fowler / GitHub Changelog / Kaminashi Developer から記事を取得
     console.log('📡 RSSフィードから記事を取得中...');
     const awsArticles = await fetcher.fetchAWSFeed();
     const fowlerArticles = await fetcher.fetchMartinFowlerFeed();
     const githubArticles = await fetcher.fetchGitHubChangelogFeed();
+    const kaminashiArticles = await fetcher.fetchKaminashiDeveloperFeed();
     
-    // 最新の記事を1つずつピックアップ
-    const testArticles: RSSFeedItem[] = [];
-    
-    if (awsArticles.length > 0) {
-      testArticles.push(awsArticles[0]);
-    }
-    
-    if (fowlerArticles.length > 0) {
-      testArticles.push(fowlerArticles[0]);
-    }
-    if (githubArticles.length > 0) {
-      testArticles.push(githubArticles[0]);
-    }
+    // 最新の記事を1つずつピックアップ（sourceとセットで保持）
+    const testEntries: Array<{ source: FeedSource; article: RSSFeedItem }> = [];
+    if (awsArticles.length > 0) testEntries.push({ source: 'aws', article: awsArticles[0] });
+    if (fowlerArticles.length > 0) testEntries.push({ source: 'martinfowler', article: fowlerArticles[0] });
+    if (githubArticles.length > 0) testEntries.push({ source: 'github_changelog', article: githubArticles[0] });
+    if (kaminashiArticles.length > 0) testEntries.push({ source: 'kaminashi_developer', article: kaminashiArticles[0] });
 
-    if (testArticles.length === 0) {
+    if (testEntries.length === 0) {
       console.log('❌ テスト用記事が見つかりませんでした');
       return;
     }
 
-    console.log(`\n📄 ${testArticles.length}記事をテスト対象として選択\n`);
+    console.log(`\n📄 ${testEntries.length}記事をテスト対象として選択\n`);
 
     // 各記事の要約を生成してテスト
-    for (let i = 0; i < testArticles.length; i++) {
-      const article = testArticles[i];
+    for (let i = 0; i < testEntries.length; i++) {
+      const { source, article } = testEntries[i];
       
       console.log(`--- 記事 ${i + 1} ---`);
+      console.log(`🟦 ソース: ${source}`);
       console.log(`📰 タイトル: ${article.title}`);
       console.log(`🔗 URL: ${article.url}`);
       console.log(`📅 公開日: ${article.published_date}`);
@@ -144,7 +140,7 @@ async function debugSummary() {
             title: article.title,
             url: article.url,
             published_date: article.published_date,
-            feed_source: i === 0 ? 'aws' : (i === 1 ? 'martinfowler' : 'github_changelog'),
+            feed_source: source,
             original_content: article.content || '',
             summary_ja: summary,
             created_at: new Date().toISOString(),

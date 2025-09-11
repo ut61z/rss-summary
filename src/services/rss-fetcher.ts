@@ -79,6 +79,18 @@ export class RSSFetcher {
     }
   }
 
+  async fetchKaminashiDeveloperFeed(): Promise<RSSFeedItem[]> {
+    const def = (FEEDS as ReadonlyArray<FeedDefinition>).find((f) => f.id === 'kaminashi_developer');
+    if (!def) return [];
+    try {
+      return await this.fetchFeed(def);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      const reason = m.includes(':') ? m.split(':').slice(1).join(':').trim() : m;
+      throw new Error(`Failed to fetch Kaminashi Developer feed: ${reason}`);
+    }
+  }
+
   private detectFormat(xmlText: string): 'rss' | 'atom' {
     const normalized = xmlText.toLowerCase();
     if (normalized.includes('<feed') && normalized.includes('<entry')) return 'atom';
