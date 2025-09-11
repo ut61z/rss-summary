@@ -42,41 +42,34 @@ export class RSSFetcher {
     return map;
   }
 
-  // 後方互換: 既存テストと呼び出しのためのラッパー
-  async fetchAWSFeed(): Promise<RSSFeedItem[]> {
-    const def = (FEEDS as ReadonlyArray<FeedDefinition>).find((f) => f.id === 'aws');
+  async fetchById(id: FeedSource): Promise<RSSFeedItem[]> {
+    const def = (FEEDS as ReadonlyArray<FeedDefinition>).find((f) => f.id === id);
     if (!def) return [];
     try {
       return await this.fetchFeed(def);
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
       const reason = m.includes(':') ? m.split(':').slice(1).join(':').trim() : m;
-      throw new Error(`Failed to fetch AWS RSS feed: ${reason}`);
+      throw new Error(`Failed to fetch ${id} feed: ${reason}`);
     }
   }
 
-  async fetchMartinFowlerFeed(): Promise<RSSFeedItem[]> {
-    const def = (FEEDS as ReadonlyArray<FeedDefinition>).find((f) => f.id === 'martinfowler');
-    if (!def) return [];
-    try {
-      return await this.fetchFeed(def);
-    } catch (e) {
-      const m = e instanceof Error ? e.message : String(e);
-      const reason = m.includes(':') ? m.split(':').slice(1).join(':').trim() : m;
-      throw new Error(`Failed to fetch Martin Fowler Atom feed: ${reason}`);
-    }
-  }
+  async fetchMany(ids: ReadonlyArray<FeedSource>): Promise<Record<FeedSource, RSSFeedItem[]>> {
+    const selected = (FEEDS as ReadonlyArray<FeedDefinition>).filter((f) => ids.includes(f.id as FeedSource));
+    const results = await Promise.allSettled(
+      selected.map(async (def) => ({ id: def.id as FeedSource, items: await this.fetchFeed(def) }))
+    );
 
-  async fetchGitHubChangelogFeed(): Promise<RSSFeedItem[]> {
-    const def = (FEEDS as ReadonlyArray<FeedDefinition>).find((f) => f.id === 'github_changelog');
-    if (!def) return [];
-    try {
-      return await this.fetchFeed(def);
-    } catch (e) {
-      const m = e instanceof Error ? e.message : String(e);
-      const reason = m.includes(':') ? m.split(':').slice(1).join(':').trim() : m;
-      throw new Error(`Failed to fetch GitHub Changelog RSS feed: ${reason}`);
+    const map = Object.create(null) as Record<FeedSource, RSSFeedItem[]>;
+    for (const id of ids) {
+      map[id] = [];
     }
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        map[r.value.id] = r.value.items;
+      }
+    }
+    return map;
   }
 
   private detectFormat(xmlText: string): 'rss' | 'atom' {

@@ -70,7 +70,7 @@
 - 単一責務・疎結合: 取得（`RSSFetcher`）/処理（`CronHandler`）/通知（`DiscordNotifier`）/表示定義（`feeds.ts`）を分離。
 - フォーマット抽象化: RSS/Atom を統一インターフェースでパース。`auto` 指定時はXMLから自動判定。
 - 部分失敗許容: 取得は `Promise.allSettled` で並列実行し、失敗は局所化して継続。件数は `perSourceCounts` としてログ化。
-- 互換性維持: 既存公開メソッド（例: `fetchAWSFeed` など）は薄いラッパーで残し、外部I/Fとエラーメッセージの契約を維持。
+- 互換性維持: デバッグ専用ラッパー（例: `fetchAWSFeed` 等）は廃止し、`fetchById`/`fetchMany` に統一。テスト・スクリプトは `FeedSource` の `id` を指定して呼び出す。
 - 型一貫性: `FeedSource` を設定から導出し、`Article.feed_source` などに適用。
 
 ### 運用手順（フィード追加）

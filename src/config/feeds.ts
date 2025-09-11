@@ -35,6 +35,14 @@ export const FEEDS = [
     color: 0x6e5494,
     enabled: true,
   },
+  {
+    id: 'kaminashi_developer',
+    url: 'https://kaminashi-developer.hatenablog.jp/rss',
+    format: 'auto',
+    displayName: 'カミナシ開発者ブログ',
+    color: 0x1abc9c,
+    enabled: true,
+  },
 ] as const satisfies ReadonlyArray<FeedDefinition>;
 
 export type FeedSource = typeof FEEDS[number]['id'];
@@ -42,4 +50,3 @@ export type FeedSource = typeof FEEDS[number]['id'];
 export function getFeedById(id: string): FeedDefinition | undefined {
   return (FEEDS as ReadonlyArray<FeedDefinition>).find((f) => f.id === id);
 }
-
