@@ -12,7 +12,7 @@ describe('RSSFetcher', () => {
     rssFetcher = new RSSFetcher();
   });
 
-  describe('fetchAWSFeed', () => {
+  describe('fetchById(aws)', () => {
     it('should fetch and parse AWS RSS feed', async () => {
       const mockRSSXML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -32,7 +32,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve(mockRSSXML)
       });
 
-      const result = await rssFetcher.fetchAWSFeed();
+      const result = await rssFetcher.fetchById('aws');
 
       expect(mockFetch).toHaveBeenCalledWith('https://aws.amazon.com/about-aws/whats-new/recent/feed/');
       expect(result).toHaveLength(1);
@@ -47,7 +47,7 @@ describe('RSSFetcher', () => {
     it('should handle fetch errors gracefully', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
 
-      await expect(rssFetcher.fetchAWSFeed()).rejects.toThrow('Failed to fetch AWS RSS feed: Network error');
+      await expect(rssFetcher.fetchById('aws')).rejects.toThrow('Failed to fetch aws feed: Network error');
     });
 
     it('should handle invalid RSS XML', async () => {
@@ -56,7 +56,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve('Invalid XML')
       });
 
-      await expect(rssFetcher.fetchAWSFeed()).rejects.toThrow('Failed to parse RSS feed');
+      await expect(rssFetcher.fetchById('aws')).rejects.toThrow(/Failed to parse RSS feed/);
     });
 
     it('should handle empty RSS feed', async () => {
@@ -72,12 +72,12 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve(emptyRSSXML)
       });
 
-      const result = await rssFetcher.fetchAWSFeed();
+      const result = await rssFetcher.fetchById('aws');
       expect(result).toEqual([]);
     });
   });
 
-  describe('fetchMartinFowlerFeed', () => {
+  describe('fetchById(martinfowler)', () => {
     it('should fetch and parse Martin Fowler Atom feed', async () => {
       const mockAtomXML = `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
@@ -95,7 +95,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve(mockAtomXML)
       });
 
-      const result = await rssFetcher.fetchMartinFowlerFeed();
+      const result = await rssFetcher.fetchById('martinfowler');
 
       expect(mockFetch).toHaveBeenCalledWith('https://martinfowler.com/feed.atom');
       expect(result).toHaveLength(1);
@@ -110,7 +110,7 @@ describe('RSSFetcher', () => {
     it('should handle fetch errors gracefully', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
 
-      await expect(rssFetcher.fetchMartinFowlerFeed()).rejects.toThrow('Failed to fetch Martin Fowler Atom feed: Network error');
+      await expect(rssFetcher.fetchById('martinfowler')).rejects.toThrow('Failed to fetch martinfowler feed: Network error');
     });
 
     it('should handle invalid Atom XML', async () => {
@@ -119,7 +119,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve('Invalid XML')
       });
 
-      await expect(rssFetcher.fetchMartinFowlerFeed()).rejects.toThrow('Failed to parse Atom feed');
+      await expect(rssFetcher.fetchById('martinfowler')).rejects.toThrow(/Failed to parse Atom feed/);
     });
 
     it('should parse Martin Fowler Atom feed with updated field', async () => {
@@ -145,7 +145,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve(mockAtomXML)
       });
 
-      const result = await rssFetcher.fetchMartinFowlerFeed();
+      const result = await rssFetcher.fetchById('martinfowler');
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
@@ -157,7 +157,7 @@ describe('RSSFetcher', () => {
     });
   });
 
-  describe('fetchGitHubChangelogFeed', () => {
+  describe('fetchById(github_changelog)', () => {
     it('should fetch and parse GitHub Changelog RSS feed', async () => {
       const mockRSSXML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -176,7 +176,7 @@ describe('RSSFetcher', () => {
         text: () => Promise.resolve(mockRSSXML)
       });
 
-      const result = await rssFetcher.fetchGitHubChangelogFeed();
+      const result = await rssFetcher.fetchById('github_changelog');
 
       expect(mockFetch).toHaveBeenCalledWith('https://github.blog/changelog/feed/');
       expect(result).toHaveLength(1);
@@ -190,7 +190,7 @@ describe('RSSFetcher', () => {
 
     it('should handle fetch errors gracefully', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
-      await expect(rssFetcher.fetchGitHubChangelogFeed()).rejects.toThrow('Failed to fetch GitHub Changelog RSS feed: Network error');
+      await expect(rssFetcher.fetchById('github_changelog')).rejects.toThrow('Failed to fetch github_changelog feed: Network error');
     });
   });
 

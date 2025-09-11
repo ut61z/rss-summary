@@ -75,19 +75,23 @@ async function debugSummary() {
       console.log('⚠️ Discord通知テスト失敗または未設定\n');
     }
 
-    // AWS / Martin Fowler / GitHub Changelog / Kaminashi Developer から記事を取得
+    // 対象フィード（今後はここに追加するだけ）
+    const TARGET_SOURCES: FeedSource[] = [
+      'aws',
+      'martinfowler',
+      'github_changelog',
+      'kaminashi_developer',
+    ];
+
     console.log('📡 RSSフィードから記事を取得中...');
-    const awsArticles = await fetcher.fetchAWSFeed();
-    const fowlerArticles = await fetcher.fetchMartinFowlerFeed();
-    const githubArticles = await fetcher.fetchGitHubChangelogFeed();
-    const kaminashiArticles = await fetcher.fetchKaminashiDeveloperFeed();
-    
+    const results = await fetcher.fetchMany(TARGET_SOURCES);
+
     // 最新の記事を1つずつピックアップ（sourceとセットで保持）
     const testEntries: Array<{ source: FeedSource; article: RSSFeedItem }> = [];
-    if (awsArticles.length > 0) testEntries.push({ source: 'aws', article: awsArticles[0] });
-    if (fowlerArticles.length > 0) testEntries.push({ source: 'martinfowler', article: fowlerArticles[0] });
-    if (githubArticles.length > 0) testEntries.push({ source: 'github_changelog', article: githubArticles[0] });
-    if (kaminashiArticles.length > 0) testEntries.push({ source: 'kaminashi_developer', article: kaminashiArticles[0] });
+    for (const source of TARGET_SOURCES) {
+      const list = results[source] || [];
+      if (list.length > 0) testEntries.push({ source, article: list[0] });
+    }
 
     if (testEntries.length === 0) {
       console.log('❌ テスト用記事が見つかりませんでした');
