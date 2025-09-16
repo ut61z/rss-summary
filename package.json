@@ -22,14 +22,14 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250911.0",
-    "@types/bun": "^1.2.21",
-    "@typescript-eslint/eslint-plugin": "^8.43.0",
-    "@typescript-eslint/parser": "^8.43.0",
+    "@cloudflare/workers-types": "^4.20250913.0",
+    "@types/bun": "^1.2.22",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "eslint": "^9.35.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.2",
-    "wrangler": "^4.35.0"
+    "wrangler": "^4.37.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
