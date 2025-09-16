@@ -43,6 +43,14 @@ export const FEEDS = [
     color: 0x1abc9c,
     enabled: true,
   },
+  {
+    id: 'tidyfirst',
+    url: 'https://tidyfirst.substack.com/feed',
+    format: 'rss',
+    displayName: 'Tidy First?',
+    color: 0xe67e22,
+    enabled: true,
+  },
 ] as const satisfies ReadonlyArray<FeedDefinition>;
 
 export type FeedSource = typeof FEEDS[number]['id'];
