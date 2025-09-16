@@ -75,6 +75,33 @@ describe('RSSFetcher', () => {
       const result = await rssFetcher.fetchById('aws');
       expect(result).toEqual([]);
     });
+
+    it('should prefer content:encoded over description when present', async () => {
+      const htmlBody = '<p>Full article body</p>';
+      const mockRSSXML = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+<title>AWS What's New</title>
+<item>
+<title>AWS announces new feature</title>
+<link>https://aws.amazon.com/about-aws/whats-new/2024/01/aws-new-feature/</link>
+<pubDate>Mon, 01 Jan 2024 10:00:00 GMT</pubDate>
+<description>A short teaser</description>
+<content:encoded><![CDATA[${htmlBody}]]></content:encoded>
+</item>
+</channel>
+</rss>`;
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(mockRSSXML)
+      });
+
+      const result = await rssFetcher.fetchById('aws');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].content).toBe(htmlBody);
+    });
   });
 
   describe('fetchById(martinfowler)', () => {

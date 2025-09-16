@@ -84,20 +84,40 @@ export class RSSFetcher {
         throw new Error('Invalid XML format');
       }
 
-      type RSSItemNode = { title?: string; link?: string; pubDate?: string; description?: string };
+      type RSSItemNode = {
+        title?: string;
+        link?: string;
+        pubDate?: string;
+        description?: string;
+        ['content:encoded']?: string | { ['#text']?: string };
+        content?: string | { ['#text']?: string };
+      };
       type RSSParsed = { rss?: { channel?: { item?: RSSItemNode | RSSItemNode[] } } };
 
       const parsed = this.xmlParser.parse(xmlText) as RSSParsed;
       const items = parsed.rss?.channel?.item ?? [];
       const itemArray = Array.isArray(items) ? items : [items];
 
+      const getNodeText = (value: unknown): string | undefined => {
+        if (!value) return undefined;
+        if (typeof value === 'string') return value;
+        if (typeof value === 'object') {
+          const text = (value as Record<string, unknown>)['#text'];
+          if (typeof text === 'string') return text;
+        }
+        return undefined;
+      };
+
       const toItem = (item: unknown): RSSFeedItem => {
         const i = (typeof item === 'object' && item !== null ? item : {}) as RSSItemNode;
+        const encoded = getNodeText(i['content:encoded']);
+        const contentTag = getNodeText(i.content);
+        const resolvedContent = encoded ?? contentTag ?? i.description ?? '';
         return {
           title: i.title ?? '',
           url: i.link ?? '',
           published_date: this.parseRSSDate(i.pubDate ?? ''),
-          content: i.description ?? '',
+          content: resolvedContent,
         };
       };
 

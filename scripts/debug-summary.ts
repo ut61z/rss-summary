@@ -81,6 +81,7 @@ async function debugSummary() {
       'martinfowler',
       'github_changelog',
       'kaminashi_developer',
+      'tidyfirst',
     ];
 
     console.log('📡 RSSフィードから記事を取得中...');
