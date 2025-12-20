@@ -23,7 +23,7 @@ export class AISummarizer {
     } else {
       this.client = new GoogleGenAI({ apiKey }) as unknown as GenAIClient;
     }
-    this.modelName = modelName ?? 'gemini-2.5-flash';
+    this.modelName = modelName ?? 'gemini-3-flash-preview';
   }
 
   async summarizeArticle(request: SummaryRequest, maxRetries: number = 3): Promise<SummaryResponse> {

@@ -35,7 +35,7 @@ describe('AISummarizer', () => {
       const result = await aiSummarizer.summarizeArticle(request);
 
       expect(mockGenerateContent).toHaveBeenCalledWith({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: expect.stringContaining('以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください')
       });
 
