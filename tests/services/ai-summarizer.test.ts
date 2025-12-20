@@ -1,19 +1,21 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { AISummarizer } from '../../src/services/ai-summarizer';
-import type { SummaryRequest, SummaryResponse } from '../../src/types';
+import { AISummarizer, type GenAIClient } from '../../src/services/ai-summarizer';
+import type { SummaryRequest } from '../../src/types';
 
 describe('AISummarizer', () => {
   let aiSummarizer: AISummarizer;
-  let mockGemini: any;
-  let mockGenerateContent: any;
+  let mockClient: GenAIClient;
+  let mockGenerateContent: ReturnType<typeof mock>;
 
   beforeEach(() => {
     mockGenerateContent = mock();
-    mockGemini = {
-      generateContent: mockGenerateContent
+    mockClient = {
+      models: {
+        generateContent: mockGenerateContent
+      }
     };
-    
-    aiSummarizer = new AISummarizer('test-api-key', mockGemini);
+
+    aiSummarizer = new AISummarizer('test-api-key', mockClient);
   });
 
   describe('summarizeArticle', () => {
@@ -24,18 +26,17 @@ describe('AISummarizer', () => {
       };
 
       const mockResponse = {
-        response: {
-          text: () => 'AWSがLambdaの新機能を発表。サーバーレス関数のパフォーマンス向上とコールドスタート時間短縮を実現。'
-        }
+        text: 'AWSがLambdaの新機能を発表。サーバーレス関数のパフォーマンス向上とコールドスタート時間短縮を実現。'
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
 
       const result = await aiSummarizer.summarizeArticle(request);
 
-      expect(mockGenerateContent).toHaveBeenCalledWith(
-        expect.stringContaining('以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください')
-      );
+      expect(mockGenerateContent).toHaveBeenCalledWith({
+        model: 'gemini-3-flash-preview',
+        contents: expect.stringContaining('以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください')
+      });
 
       expect(result.summary).toBe('AWSがLambdaの新機能を発表。サーバーレス関数のパフォーマンス向上とコールドスタート時間短縮を実現。');
     });
@@ -47,9 +48,7 @@ describe('AISummarizer', () => {
       };
 
       const mockResponse = {
-        response: {
-          text: () => 'テスト記事のタイトルのみの要約です。'
-        }
+        text: 'テスト記事のタイトルのみの要約です。'
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
@@ -67,9 +66,7 @@ describe('AISummarizer', () => {
 
       const longSummary = 'あ'.repeat(450); // 450文字の要約
       const mockResponse = {
-        response: {
-          text: () => longSummary
-        }
+        text: longSummary
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
@@ -98,9 +95,22 @@ describe('AISummarizer', () => {
       };
 
       const mockResponse = {
-        response: {
-          text: () => ''
-        }
+        text: ''
+      };
+
+      mockGenerateContent.mockResolvedValue(mockResponse);
+
+      await expect(aiSummarizer.summarizeArticle(request, 1)).rejects.toThrow('Failed to generate summary: Empty response from AI service');
+    });
+
+    it('should handle undefined text in response', async () => {
+      const request: SummaryRequest = {
+        title: 'Test Article',
+        content: 'Test content'
+      };
+
+      const mockResponse = {
+        text: undefined
       };
 
       mockGenerateContent.mockResolvedValue(mockResponse);
@@ -115,9 +125,7 @@ describe('AISummarizer', () => {
       };
 
       const mockResponse = {
-        response: {
-          text: () => '要約が生成されました。'
-        }
+        text: '要約が生成されました。'
       };
 
       // First call fails, second succeeds
