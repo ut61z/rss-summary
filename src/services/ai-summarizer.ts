@@ -1,24 +1,29 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import type { SummaryRequest, SummaryResponse } from '../types';
 
 export interface GenerateContentResponse {
-  response: { text(): string };
+  text?: string;
 }
 
-export interface GenerativeModel {
-  generateContent(input: string): Promise<GenerateContentResponse>;
+export interface GenAIModels {
+  generateContent(params: { model: string; contents: string }): Promise<GenerateContentResponse>;
+}
+
+export interface GenAIClient {
+  models: GenAIModels;
 }
 
 export class AISummarizer {
-  private model: GenerativeModel;
+  private client: GenAIClient;
+  private modelName: string;
 
-  constructor(apiKey: string, model?: GenerativeModel) {
-    if (model) {
-      this.model = model;
+  constructor(apiKey: string, client?: GenAIClient, modelName?: string) {
+    if (client) {
+      this.client = client;
     } else {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      this.client = new GoogleGenAI({ apiKey }) as unknown as GenAIClient;
     }
+    this.modelName = modelName ?? 'gemini-3-flash-preview';
   }
 
   async summarizeArticle(request: SummaryRequest, maxRetries: number = 3): Promise<SummaryResponse> {
@@ -27,11 +32,14 @@ export class AISummarizer {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const prompt = this.buildPrompt(request);
-        
-        const result = await this.model.generateContent(prompt);
 
-        const summary = result.response.text().trim();
-        
+        const result = await this.client.models.generateContent({
+          model: this.modelName,
+          contents: prompt,
+        });
+
+        const summary = (result.text ?? '').trim();
+
         if (!summary) {
           throw new Error('Empty response from AI service');
         }
@@ -41,7 +49,7 @@ export class AISummarizer {
         return { summary: truncatedSummary };
       } catch (e) {
         lastError = e as Error;
-        
+
         if (attempt === maxRetries) {
           if (attempt > 1) {
             throw new Error(`Failed to generate summary after ${maxRetries} attempts: ${lastError.message}`);
@@ -61,7 +69,7 @@ export class AISummarizer {
 
   buildPrompt(request: SummaryRequest): string {
     const content = request.content || '(内容なし)';
-    
+
     return `
     以下の記事について新聞のテレビ欄のように日本語で概要と注目すべき点を無駄なく簡潔に記述してください。
     絶対に250字を超えないようにしてください。
@@ -81,7 +89,7 @@ export class AISummarizer {
 
     // Remove leading/trailing whitespace and newlines
     const cleaned = summary.trim().replace(/\n+/g, ' ');
-    
+
     if (cleaned.length <= 400) {
       return cleaned;
     }
@@ -96,7 +104,7 @@ export class AISummarizer {
         title: 'Test',
         content: 'This is a test.'
       };
-      
+
       await this.summarizeArticle(testRequest);
       return true;
     } catch {
